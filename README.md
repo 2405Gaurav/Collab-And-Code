@@ -133,18 +133,6 @@
 
 ---
 
-## 📱 Screenshots
-
-<div align="center">
-
-![Dashboard](https://via.placeholder.com/800x400/1a1a1a/ffffff?text=Haxplore+Dashboard)
-![Code Editor](https://via.placeholder.com/800x400/2d2d2d/ffffff?text=AI+Powered+Code+Editor)
-![Collaboration](https://via.placeholder.com/800x400/3d3d3d/ffffff?text=Real-time+Collaboration)
-
-</div>
-
----
-
 ## 🤝 Contributing
 
 We love your input! We want to make contributing to Haxplore as easy and transparent as possible.
@@ -181,7 +169,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Made with ❤️ by the Haxplore Team**
+**Made with ❤️ by Yash Dhiman**
 
 [![GitHub stars](https://img.shields.io/github/stars/yourusername/haxplore?style=social)](https://github.com/yourusername/haxplore/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/yourusername/haxplore?style=social)](https://github.com/yourusername/haxplore/network)
