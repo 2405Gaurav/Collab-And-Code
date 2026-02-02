@@ -1,4 +1,4 @@
-npmimport { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 export async function POST(request) {
