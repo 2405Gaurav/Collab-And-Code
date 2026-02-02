@@ -264,67 +264,66 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+<Dialog open={isOpen} onOpenChange={setIsOpen}>
+  <DialogTrigger asChild />
+  <DialogContent className="bg-[#1E293B] text-white">
+    <DialogTitle>Create Workspace</DialogTitle>
+    <div className="space-y-4">
+      <p className="text-sm text-gray-400">
+        Enter the name of the workspace and select if it should be public.
+      </p>
+      <Input
+        placeholder="Workspace Name"
+        value={workspaceName}
+        onChange={(e) => setWorkspaceName(e.target.value)}
+        className="text-white placeholder-white ring-1 ring-gray-400"
+      />
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild />
-        <DialogContent className="bg-[#1E293B] text-white">
-          <DialogTitle>Create Workspace</DialogTitle>
-          <DialogDescription>
-            <p className="mb-2">
-              Enter the name of the workspace and select if it should be public.
-            </p>
-            <Input
-              placeholder="Workspace Name"
-              value={workspaceName}
-              onChange={(e) => setWorkspaceName(e.target.value)}
-              className="mb-4 text-white placeholder-white ring-1 ring-gray-400"
-            />
+      <div className="flex space-x-4">
+        <Button
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium shadow-md transition-all duration-300 ${
+            isPublic
+              ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-indigo-600 hover:to-blue-500"
+              : "bg-gray-600 hover:bg-gray-500"
+          }`}
+          onClick={() => setIsPublic(true)}
+        >
+          <Globe className="w-5 h-5" />
+          Public
+        </Button>
 
-            <div className="flex space-x-4 mb-4">
-              <Button
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium shadow-md transition-all duration-300 ${
-                  isPublic
-                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-indigo-600 hover:to-blue-500"
-                    : "bg-gray-600 hover:bg-gray-500"
-                }`}
-                onClick={() => setIsPublic(true)}
-              >
-                <Globe className="w-5 h-5" />
-                Public
-              </Button>
+        <Button
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium shadow-md transition-all duration-300 ${
+            !isPublic
+              ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-indigo-600 hover:to-blue-500"
+              : "bg-gray-600 hover:bg-gray-500"
+          }`}
+          onClick={() => setIsPublic(false)}
+        >
+          <Lock className="w-5 h-5" />
+          Private
+        </Button>
+      </div>
 
-              <Button
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium shadow-md transition-all duration-300 ${
-                  !isPublic
-                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-indigo-600 hover:to-blue-500"
-                    : "bg-gray-600 hover:bg-gray-500"
-                }`}
-                onClick={() => setIsPublic(false)}
-              >
-                <Lock className="w-5 h-5" />
-                Private
-              </Button>
-            </div>
-
-            <div className="flex space-x-4">
-              <Button
-                onClick={handleCreateWorkspace}
-                className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-green-500 to-teal-600 hover:from-teal-600 hover:to-green-500 text-white font-semibold rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105"
-                disabled={isCreating}
-              >
-                {isCreating ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <PlusCircle className="w-5 h-5" />
-                    Create
-                  </>
-                )}
-              </Button>
-            </div>
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
+      <div className="flex space-x-4">
+        <Button
+          onClick={handleCreateWorkspace}
+          className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-green-500 to-teal-600 hover:from-teal-600 hover:to-green-500 text-white font-semibold rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105"
+          disabled={isCreating}
+        >
+          {isCreating ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <>
+              <PlusCircle className="w-5 h-5" />
+              Create
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
     </div>
   );
 };
