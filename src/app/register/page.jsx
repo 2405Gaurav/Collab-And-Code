@@ -147,7 +147,7 @@ export default function SignUpPage() {
         <DialogContent className="bg-slate-800 border-slate-700 text-white">
           <DialogHeader>
             <DialogTitle>Verify Your Email</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription asChild className="text-slate-400">
               Enter the 6-digit code sent to {email}
             </DialogDescription>
           </DialogHeader>

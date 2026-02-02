@@ -155,35 +155,35 @@ const Profile = () => {
                 Change Password
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-gray-800 p-6 rounded-lg">
-              <DialogTitle className="text-lg font-semibold mb-4 text-white">Reset Password</DialogTitle>
-              <DialogDescription className="text-sm text-gray-400 mb-4">
-                Enter your email to receive a password reset link.
-              </DialogDescription>
-              <Input
-                type="email"
-                placeholder="Your Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mb-4 bg-gray-700 text-white border border-blue-500 rounded-md text-sm"
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => setIsDialogOpen(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-sm font-medium py-2 px-4 rounded-md"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handlePasswordReset}
-                  disabled={isLoading}
-                  className={`${isLoading ? "bg-gray-500" : "bg-blue-600"} hover:bg-blue-700 text-sm font-medium py-2 px-4 rounded-md text-white`}
-                >
-                  {isLoading ? "Sending..." : "Send Link"}
-                </Button>
-              </div>
-            </DialogContent>
+         <DialogContent className="bg-gray-800 p-6 rounded-lg">
+  <DialogTitle className="text-lg font-semibold mb-4 text-white">Reset Password</DialogTitle>
+  <DialogDescription className="text-sm text-gray-400 mb-4">
+    Enter your email to receive a password reset link.
+  </DialogDescription>
+  <Input
+    type="email"
+    placeholder="Your Email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    className="mb-4 bg-gray-700 text-white border border-blue-500 rounded-md text-sm"
+  />
+  <div className="flex justify-end gap-2">
+    <Button
+      variant="secondary"
+      onClick={() => setIsDialogOpen(false)}
+      className="bg-gray-600 hover:bg-gray-700 text-sm font-medium py-2 px-4 rounded-md"
+    >
+      Cancel
+    </Button>
+    <Button
+      onClick={handlePasswordReset}
+      disabled={isLoading}
+      className={`${isLoading ? "bg-gray-500" : "bg-blue-600"} hover:bg-blue-700 text-sm font-medium py-2 px-4 rounded-md text-white`}
+    >
+      {isLoading ? "Sending..." : "Send Link"}
+    </Button>
+  </div>
+</DialogContent>
           </Dialog>
         )}
 
