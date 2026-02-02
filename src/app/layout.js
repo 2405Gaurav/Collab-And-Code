@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "⚡ YashCodeUI ",
+  title: "Collab-And-Code",
   description: "New generated code editor with AI-powered suggestions.",
 };
 
