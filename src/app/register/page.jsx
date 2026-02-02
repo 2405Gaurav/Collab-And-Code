@@ -144,36 +144,38 @@ export default function SignUpPage() {
       </Card>
 
       <Dialog open={showVerification} onOpenChange={setShowVerification}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white">
-          <DialogHeader>
-            <DialogTitle>Verify Your Email</DialogTitle>
-            <DialogDescription asChild className="text-slate-400">
-              Enter the 6-digit code sent to {email}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Label className="block text-sm font-medium text-slate-300">
-              Verification Code
-            </Label>
-            <Input
-              type="text"
-              placeholder="123456"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              className="bg-slate-700 text-white border-slate-600"
-              maxLength={6}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={handleVerifyCode}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {loading ? "Verifying..." : "Verify Code"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+        <Dialog open={showVerification} onOpenChange={setShowVerification}>
+  <DialogContent className="bg-slate-800 border-slate-700 text-white">
+    <DialogHeader>
+      <DialogTitle>Verify Your Email</DialogTitle>
+      <DialogDescription className="text-slate-400">
+        Enter the 6-digit code sent to {email}
+      </DialogDescription>
+    </DialogHeader>
+    <div className="space-y-4">
+      <Label className="block text-sm font-medium text-slate-300">
+        Verification Code
+      </Label>
+      <Input
+        type="text"
+        placeholder="123456"
+        value={verificationCode}
+        onChange={(e) => setVerificationCode(e.target.value)}
+        className="bg-slate-700 text-white border-slate-600"
+        maxLength={6}
+      />
+    </div>
+    <DialogFooter>
+      <Button
+        onClick={handleVerifyCode}
+        disabled={loading}
+        className="bg-blue-600 hover:bg-blue-700 text-white"
+      >
+        {loading ? "Verifying..." : "Verify Code"}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
       </Dialog>
     </div>
   );
