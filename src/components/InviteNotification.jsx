@@ -24,23 +24,42 @@ const InviteNotification = () => {
       if (docSnap.exists()) {
         setInvites(docSnap.data().invites || []);
       }
+    }, (error) => {
+      // ✅ IMPROVED: Better error logging for snapshot listener
+      console.error("Error listening to user invites:", {
+        message: error?.message || "Unknown error",
+        code: error?.code || "UNKNOWN",
+        userId: user?.uid,
+        fullError: error
+      });
     });
 
     return () => unsubscribe();
   }, [user]);
 
   const handleAcceptInvite = async (workspaceId) => {
-    if (!user) return;
+    if (!user) {
+      toast.error("You must be logged in to accept invites");
+      return;
+    }
 
     try {
+      // ✅ IMPROVED: Add validation
+      if (!workspaceId) {
+        throw new Error("Invalid workspace ID");
+      }
+
+      // Step 1: Create member record
       const membersRef = doc(db, `workspaces/${workspaceId}/members`, user.uid);
       await setDoc(membersRef, {
         userId: user.uid,
         role: "contributor",
         displayName: user.displayName || "Unknown",
         photoURL: user.photoURL || "/robotic.png",
+        joinedAt: new Date().toISOString(),
       });
 
+      // Step 2: Remove invite from user document
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         invites: arrayRemove(workspaceId),
@@ -48,16 +67,45 @@ const InviteNotification = () => {
 
       setInvites((prev) => prev.filter((id) => id !== workspaceId));
       toast.success("You have joined the workspace!");
-      router.push("/workspace/" + workspaceId);
+      
+      // Navigate after a short delay to ensure state updates
+      setTimeout(() => {
+        router.push("/workspace/" + workspaceId);
+      }, 500);
     } catch (error) {
-      console.error("Error accepting invite:", error);
+      // ✅ IMPROVED: Detailed error logging and user-friendly messages
+      console.error("Error accepting invite:", {
+        message: error?.message || "Unknown error",
+        code: error?.code || "UNKNOWN",
+        workspaceId,
+        userId: user?.uid,
+        fullError: error
+      });
+
+      // ✅ IMPROVED: User-friendly error messages
+      if (error?.code === "permission-denied") {
+        toast.error("You don't have permission to join this workspace");
+      } else if (error?.code === "not-found") {
+        toast.error("Workspace not found. It may have been deleted.");
+      } else if (error?.message?.includes("Invalid workspace")) {
+        toast.error("Invalid workspace ID");
+      } else {
+        toast.error(`Failed to join workspace: ${error?.message || "Unknown error"}`);
+      }
     }
   };
 
   const handleDeleteInvite = async (workspaceId) => {
-    if (!user) return;
+    if (!user) {
+      toast.error("You must be logged in");
+      return;
+    }
 
     try {
+      if (!workspaceId) {
+        throw new Error("Invalid workspace ID");
+      }
+
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         invites: arrayRemove(workspaceId),
@@ -66,7 +114,20 @@ const InviteNotification = () => {
       setInvites((prev) => prev.filter((id) => id !== workspaceId));
       toast.info("Invite declined.");
     } catch (error) {
-      console.error("Error deleting invite:", error);
+      // ✅ IMPROVED: Detailed error logging
+      console.error("Error deleting invite:", {
+        message: error?.message || "Unknown error",
+        code: error?.code || "UNKNOWN",
+        workspaceId,
+        userId: user?.uid,
+        fullError: error
+      });
+
+      if (error?.code === "permission-denied") {
+        toast.error("Permission denied: Cannot decline this invite");
+      } else {
+        toast.error(`Failed to decline invite: ${error?.message || "Unknown error"}`);
+      }
     }
   };
 
@@ -82,13 +143,12 @@ const InviteNotification = () => {
             transition={{ type: "spring", stiffness: 200, damping: 20 }}
             className="relative"
           >
-            <div className="w-96 shadow-xl  bg-slate-300 ring-2 ring-green-500 rounded-xl backdrop-blur-sm">
+            <div className="w-96 shadow-xl bg-slate-300 ring-2 ring-green-500 rounded-xl backdrop-blur-sm">
               <CardHeader className="p-4 pb-2">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-semibold text-black">
                     Workspace Invite
                   </CardTitle>
-                  {/* ✅ FIXED: Use motion.div wrapper instead of motion.button */}
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -105,7 +165,7 @@ const InviteNotification = () => {
               <CardContent className="p-4 pt-0">
                 <p className="text-gray-700 text-sm mb-4">
                   You've been invited to join:
-                  <span className="block font-mono text-blue-400 mt-1 truncate">
+                  <span className="block font-mono text-blue-600 mt-1 truncate text-xs">
                     {workspaceId}
                   </span>
                 </p>

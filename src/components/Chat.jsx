@@ -20,44 +20,109 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { ClipboardDocumentIcon, CheckIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { MessageSquarePlus, Send, Sparkles, Trash, Trash2, X, XCircle } from "lucide-react";
+import toast from "react-hot-toast";
 
 function Chatroom({ workspaceId, setIsChatOpen }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
+  const [error, setError] = useState(null);
 
-  const userId = auth.currentUser.uid;
-  const name = auth.currentUser.displayName;
-
-  const messagesRef = collection(firestore, "messages");
-  const messagesQuery = query(messagesRef, orderBy("createdAt"));
+  const userId = auth.currentUser?.uid;
+  const name = auth.currentUser?.displayName || "Anonymous";
 
   const messagesEndRef = useRef(null);
 
+  // ✅ FIX 1: Separate effect for Firestore listener with proper cleanup
   useEffect(() => {
-    if (!workspaceId) return;
+    if (!workspaceId || !userId) {
+      setLoading(false);
+      setError("Missing workspace or user ID");
+      return;
+    }
 
     setLoading(true);
+    setError(null);
+    let unsubscribe = null;
 
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      const messagesData = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((msg) => msg.workspaceId === workspaceId);
+    try {
+      const messagesRef = collection(firestore, "messages");
+      const messagesQuery = query(messagesRef, orderBy("createdAt", "asc"));
 
-      setMessages(messagesData);
+      // ✅ Set up real-time listener with proper error handler
+      unsubscribe = onSnapshot(
+        messagesQuery,
+        (snapshot) => {
+          try {
+            const messagesData = snapshot.docs
+              .map((doc) => ({ id: doc.id, ...doc.data() }))
+              .filter((msg) => msg.workspaceId === workspaceId);
+
+            setMessages(messagesData);
+            setLoading(false);
+            setError(null);
+          } catch (err) {
+            // ✅ Proper error logging
+            console.error("Error processing messages snapshot:", {
+              message: err?.message,
+              code: err?.code,
+              fullError: err
+            });
+            setError("Failed to process messages");
+            setLoading(false);
+          }
+        },
+        (error) => {
+          // ✅ FIX 2: Proper error handling for listener
+          console.error("Error in messages listener:", {
+            message: error?.message,
+            code: error?.code,
+            fullError: error
+          });
+
+          if (error?.code === 'permission-denied') {
+            setError("Permission denied: You cannot access messages. Check Firestore rules.");
+            toast.error("Permission denied for messages");
+          } else if (error?.code === 'unavailable') {
+            setError("Firestore service unavailable. Please try again.");
+          } else {
+            setError(`Error loading messages: ${error?.message}`);
+          }
+          setLoading(false);
+        }
+      );
+    } catch (error) {
+      // ✅ Error in setup
+      console.error("Error setting up messages listener:", {
+        message: error?.message,
+        code: error?.code,
+        fullError: error
+      });
+      setError("Failed to connect to messages");
       setLoading(false);
-    });
+    }
 
-    return () => unsubscribe();
-  }, [workspaceId]);
+    // ✅ FIX 3: Proper cleanup function
+    return () => {
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch (err) {
+          console.debug("Listener cleanup error (expected):", err?.message);
+        }
+      }
+    };
+  }, [workspaceId, userId]); // ✅ FIX 4: Specific dependencies
 
+  // ✅ Auto-scroll to latest message
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, newMessage, isAIProcessing]);
+  }, [messages, isAIProcessing]);
 
+  // ✅ FIX 5: Better AI response generation with error handling
   const generateAIResponse = async (prompt) => {
     setIsAIProcessing(true);
     try {
@@ -66,37 +131,52 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: prompt }),
+        body: JSON.stringify({ message: prompt, workspaceId }),
       });
   
       if (!response.ok) {
-        throw new Error('API request failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API request failed with status ${response.status}`);
       }
   
       const data = await response.json();
-      return data.aiResponse;
+      return data.aiResponse || "I couldn't generate a response. Please try again.";
     } catch (error) {
-      console.error("API Error:", error);
+      // ✅ Proper error logging
+      console.error("AI API Error:", {
+        message: error?.message,
+        code: error?.code,
+        fullError: error
+      });
+      toast.error(`AI Error: ${error?.message}`);
       return "Sorry, I couldn't process that request. Please try again.";
     } finally {
       setIsAIProcessing(false);
     }
   };
 
+  // ✅ FIX 6: Better message sending with error handling
   const sendMessage = async () => {
     if (newMessage.trim() === "") return;
+    if (!userId || !workspaceId) {
+      toast.error("Not connected to workspace");
+      return;
+    }
 
-    const imageUrl = auth.currentUser.photoURL;
+    const imageUrl = auth.currentUser?.photoURL || "/robotic.png";
     const aiMatch = newMessage.match(/@(.+)/);
     let aiPrompt = null;
     let userMessage = newMessage;
 
-    console.log(aiMatch);
+    // Extract AI prompt if @ is used
     if (aiMatch) {
       aiPrompt = aiMatch[1].trim();
     }
 
     try {
+      const messagesRef = collection(firestore, "messages");
+      
+      // Send user message
       if (userMessage) {
         await addDoc(messagesRef, {
           text: userMessage,
@@ -108,6 +188,7 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
         });
       }
 
+      // Generate AI response if @ prompt was used
       if (aiPrompt) {
         const aiResponse = await generateAIResponse(aiPrompt);
         await addDoc(messagesRef, {
@@ -121,22 +202,59 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
       }
 
       setNewMessage("");
+      toast.success("Message sent!");
     } catch (error) {
-      console.error("Error sending message:", error);
+      // ✅ Proper error logging
+      console.error("Error sending message:", {
+        message: error?.message,
+        code: error?.code,
+        fullError: error
+      });
+
+      if (error?.code === 'permission-denied') {
+        toast.error("Permission denied: You cannot send messages");
+      } else {
+        toast.error(`Failed to send message: ${error?.message}`);
+      }
     }
   };
 
+  // ✅ FIX 7: Better clear chat with error handling
   const clearChat = async () => {
+    if (!workspaceId) {
+      toast.error("Workspace not connected");
+      return;
+    }
+
+    const confirmed = window.confirm("Are you sure you want to clear all messages?");
+    if (!confirmed) return;
+
     try {
+      const messagesRef = collection(firestore, "messages");
       const querySnapshot = await getDocs(
         query(messagesRef, where("workspaceId", "==", workspaceId))
       );
       
-      const deletePromises = querySnapshot.docs.map((docItem) => deleteDoc(doc(messagesRef, docItem.id)));
+      const deletePromises = querySnapshot.docs.map((docItem) => 
+        deleteDoc(doc(messagesRef, docItem.id))
+      );
       await Promise.all(deletePromises);
+      
       setMessages([]);
+      toast.success("Chat cleared!");
     } catch (error) {
-      console.error("Error clearing chat:", error);
+      // ✅ Proper error logging
+      console.error("Error clearing chat:", {
+        message: error?.message,
+        code: error?.code,
+        fullError: error
+      });
+
+      if (error?.code === 'permission-denied') {
+        toast.error("Permission denied: You cannot clear messages");
+      } else {
+        toast.error(`Failed to clear chat: ${error?.message}`);
+      }
     }
   };
 
@@ -190,13 +308,18 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
     };
 
     const copyToClipboard = async (code, index) => {
-      await navigator.clipboard.writeText(code);
-      setCopiedCode(index);
-      setTimeout(() => setCopiedCode(null), 2000);
+      try {
+        await navigator.clipboard.writeText(code);
+        setCopiedCode(index);
+        toast.success("Copied to clipboard!");
+        setTimeout(() => setCopiedCode(null), 2000);
+      } catch (err) {
+        toast.error("Failed to copy");
+      }
     };
 
     return (
-      <div className={`flex flex-col gap-1  ${
+      <div className={`flex flex-col gap-1 ${
         isCurrentUser ? "items-end" : 
         isAI ? "items-center w-full" : "items-start"
       }`}>
@@ -217,7 +340,7 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
 
           <div className={`py-2 px-4 text-sm rounded-2xl mx-auto max-w-[550px] break-words ${
             isAI ? "bg-green-900/20 border ring-1 ring-green-400" :
-            isCurrentUser ? "bg-purple-600/60" : "bg-blue-600/60 "
+            isCurrentUser ? "bg-purple-600/60" : "bg-blue-600/60"
           }`}>
             {isAI && <span className="text-blue-400 mr-2">⚡</span>}
             
@@ -233,10 +356,12 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
               if (part.type === 'code') {
                 return (
                   <div key={index} className="relative my-2 group">
-                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <button
                         onClick={() => copyToClipboard(part.code, index)}
                         className="p-1 rounded bg-gray-700/50 hover:bg-gray-600/50 backdrop-blur-sm"
+                        title="Copy code"
+                        aria-label="Copy code"
                       >
                         {copiedCode === index ? (
                           <CheckIcon className="h-4 w-4 text-green-400" />
@@ -287,7 +412,12 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
-        Loading messages...
+        <div className="text-center">
+          <div className="animate-spin mb-4">
+            <Sparkles className="h-8 w-8 mx-auto" />
+          </div>
+          <p>Loading messages...</p>
+        </div>
       </div>
     );
   }
@@ -300,15 +430,22 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
           <div className="p-2 bg-indigo-900/20 rounded-lg border border-indigo-200/20">
             <Sparkles className="h-6 w-6 text-indigo-200" />
           </div>
-          <h2 className="text-xl font-semibold shadow-2xl text-gray-100">
-            Collaborative AI Chat
-            <span className="text-indigo-400/90 text-sm font-normal ml-2">v1.2</span>
-          </h2>
+          <div>
+            <h2 className="text-xl font-semibold shadow-2xl text-gray-100">
+              Collaborative AI Chat
+              <span className="text-indigo-400/90 text-sm font-normal ml-2">v1.2</span>
+            </h2>
+            {error && (
+              <p className="text-xs text-red-400 mt-1">{error}</p>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={clearChat}
             className="px-3 py-2 text-sm bg-gray-700/50 hover:bg-gray-600/60 text-gray-300 rounded-xl flex items-center gap-2 transition-all duration-200 hover:scale-[1.02]"
+            title="Clear chat history"
+            aria-label="Clear chat"
           >
             <Trash className="h-4 w-4 text-red-500" />
             <span>Clear</span>
@@ -316,6 +453,8 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
           <Button
             onClick={() => setIsChatOpen(false)}
             className="p-2 bg-gray-700/50 hover:bg-gray-600/60 text-white rounded-xl transition-all duration-200 hover:scale-[1.02]"
+            title="Close chat"
+            aria-label="Close chat"
           >
             <X className="h-5 w-5" />
           </Button>
@@ -323,7 +462,7 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-800/60 ">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-800/60">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm animate-fade-in">
             <div className="mb-4 animate-float">
@@ -337,7 +476,6 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
             <MessageBubble 
               key={msg.id} 
               msg={msg}
-              className="animate-message-enter"
             />
           ))
         )}
@@ -372,11 +510,14 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
             onKeyDown={handleKeyDown}
             placeholder="Type your message... (@ for AI commands)"
             className="flex-1 bg-gray-700/40 border border-gray-600/30 text-gray-200 placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all"
+            disabled={isAIProcessing}
           />
           <Button 
             type="submit" 
-            disabled={isAIProcessing}
-            className="bg-indigo-600/80 hover:bg-indigo-500/90 text-gray-100 rounded-xl px-6 flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] group"
+            disabled={isAIProcessing || !userId || !workspaceId}
+            className="bg-indigo-600/80 hover:bg-indigo-500/90 text-gray-100 rounded-xl px-6 flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] group disabled:opacity-50"
+            title="Send message (Shift+Enter for new line)"
+            aria-label="Send message"
           >
             <PaperAirplaneIcon className="h-5 w-5 text-indigo-100 group-hover:translate-x-0.5 transition-transform" />
             <span>Send</span>
@@ -386,6 +527,5 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
     </div>
   );
 }
-
 
 export default Chatroom;

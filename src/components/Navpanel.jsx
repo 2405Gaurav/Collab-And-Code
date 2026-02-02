@@ -19,6 +19,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 const NavPanel = ({ workspaceId, openFile }) => {
   const [folders, setFolders] = useState([]);
@@ -36,6 +37,7 @@ const NavPanel = ({ workspaceId, openFile }) => {
     return name.length > 20 ? `${name.substring(0, 20)}...` : name;
   };
 
+  // ✅ IMPROVED: Better useEffect with error handling
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) {
@@ -43,37 +45,99 @@ const NavPanel = ({ workspaceId, openFile }) => {
       return;
     }
 
-    const membersRef = collection(db, `workspaces/${workspaceId}/members`);
-    const unsubscribeMembers = onSnapshot(membersRef, (snapshot) => {
-      const membersData = snapshot.docs.map((doc) => doc.data());
-      const member = membersData.find((m) => m.userId === user.uid);
-      if (member) setUserRole(member.role);
-    });
+    if (!workspaceId) {
+      console.warn("Missing workspaceId");
+      return;
+    }
 
-    const foldersRef = collection(db, `workspaces/${workspaceId}/folders`);
-    const unsubscribeFolders = onSnapshot(foldersRef, (snapshot) => {
-      const foldersData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setFolders(foldersData);
+    let unsubscribeMembers, unsubscribeFolders, unsubscribeFiles;
 
-      const initialFolderStates = {};
-      foldersData.forEach((folder) => {
-        initialFolderStates[folder.id] = false;
+    try {
+      // Members listener
+      const membersRef = collection(db, `workspaces/${workspaceId}/members`);
+      unsubscribeMembers = onSnapshot(
+        membersRef,
+        (snapshot) => {
+          try {
+            const membersData = snapshot.docs.map((doc) => doc.data());
+            const member = membersData.find((m) => m.userId === user.uid);
+            if (member) {
+              setUserRole(member.role);
+            }
+          } catch (err) {
+            console.error("Error processing members snapshot:", err);
+          }
+        },
+        (error) => {
+          console.error("Error listening to members:", {
+            message: error?.message,
+            code: error?.code,
+            fullError: error
+          });
+        }
+      );
+
+      // Folders listener
+      const foldersRef = collection(db, `workspaces/${workspaceId}/folders`);
+      unsubscribeFolders = onSnapshot(
+        foldersRef,
+        (snapshot) => {
+          try {
+            const foldersData = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+            setFolders(foldersData);
+
+            const initialFolderStates = {};
+            foldersData.forEach((folder) => {
+              initialFolderStates[folder.id] = false;
+            });
+            setFolderStates(initialFolderStates);
+          } catch (err) {
+            console.error("Error processing folders snapshot:", err);
+          }
+        },
+        (error) => {
+          console.error("Error listening to folders:", {
+            message: error?.message,
+            code: error?.code,
+            fullError: error
+          });
+        }
+      );
+
+      // Files listener
+      const filesRef = collection(db, `workspaces/${workspaceId}/files`);
+      unsubscribeFiles = onSnapshot(
+        filesRef,
+        (snapshot) => {
+          try {
+            setFiles(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+          } catch (err) {
+            console.error("Error processing files snapshot:", err);
+          }
+        },
+        (error) => {
+          console.error("Error listening to files:", {
+            message: error?.message,
+            code: error?.code,
+            fullError: error
+          });
+        }
+      );
+    } catch (error) {
+      console.error("Error setting up listeners:", {
+        message: error?.message,
+        code: error?.code,
+        fullError: error
       });
-      setFolderStates(initialFolderStates);
-    });
-
-    const filesRef = collection(db, `workspaces/${workspaceId}/files`);
-    const unsubscribeFiles = onSnapshot(filesRef, (snapshot) => {
-      setFiles(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
+    }
 
     return () => {
-      unsubscribeMembers();
-      unsubscribeFolders();
-      unsubscribeFiles();
+      if (unsubscribeMembers) unsubscribeMembers();
+      if (unsubscribeFolders) unsubscribeFolders();
+      if (unsubscribeFiles) unsubscribeFiles();
     };
   }, [workspaceId]);
 
@@ -108,27 +172,52 @@ const NavPanel = ({ workspaceId, openFile }) => {
         doc(db, `workspaces/${workspaceId}/${collectionName}/${draggedItem.id}`),
         { [fieldName]: targetFolderId || null }
       );
+      toast.success("Item moved!");
     } catch (error) {
-      console.error("Error moving item:", error);
+      // ✅ IMPROVED: Better error logging
+      console.error("Error moving item:", {
+        message: error?.message,
+        code: error?.code,
+        fullError: error
+      });
+      
+      if (error?.code === 'permission-denied') {
+        toast.error("Permission denied: You cannot move this item");
+      } else {
+        toast.error(`Failed to move item: ${error?.message}`);
+      }
     }
     setDraggedItem(null);
   };
 
+  // ✅ FIXED: Add createdBy field when creating items
   const createItem = async (folderid) => {
     if (!newItemName) return;
+    
+    if (!auth.currentUser) {
+      toast.error("You must be logged in to create items");
+      return;
+    }
 
     try {
       if (creatingType === "folder") {
         await addDoc(collection(db, `workspaces/${workspaceId}/folders`), {
           name: newItemName,
           parentFolderId: creatingParentFolderId,
+          createdBy: auth.currentUser.uid,  // ✅ ADDED: Required by Firestore rules
+          createdAt: new Date().toISOString(),
         });
+        toast.success("Folder created!");
       } else {
         await addDoc(collection(db, `workspaces/${workspaceId}/files`), {
           name: newItemName,
           folderId: creatingParentFolderId,
           workspaceId,
+          createdBy: auth.currentUser.uid,  // ✅ ADDED: Required by Firestore rules
+          createdAt: new Date().toISOString(),
+          content: "", // ✅ ADDED: Initialize content
         });
+        toast.success("File created!");
       }
       setNewItemName("");
       setCreatingType(null);
@@ -136,7 +225,19 @@ const NavPanel = ({ workspaceId, openFile }) => {
       setFolderStates({ ...folderStates, [folderid]: true });
 
     } catch (error) {
-      console.error("Error creating item:", error);
+      // ✅ IMPROVED: Better error logging
+      console.error("Error creating item:", {
+        message: error?.message,
+        code: error?.code,
+        creatingType,
+        fullError: error
+      });
+
+      if (error?.code === 'permission-denied') {
+        toast.error("Permission denied: You cannot create items in this workspace");
+      } else {
+        toast.error(`Failed to create ${creatingType}: ${error?.message}`);
+      }
     }
   };
 
@@ -149,27 +250,64 @@ const NavPanel = ({ workspaceId, openFile }) => {
         doc(db, `workspaces/${workspaceId}/${collectionName}/${renamingItem.id}`),
         { name: renamingItem.name }
       );
+      toast.success("Item renamed!");
       setRenamingItem(null);
     } catch (error) {
-      console.error("Error renaming item:", error);
+      // ✅ IMPROVED: Better error logging
+      console.error("Error renaming item:", {
+        message: error?.message,
+        code: error?.code,
+        fullError: error
+      });
+
+      if (error?.code === 'permission-denied') {
+        toast.error("Permission denied: You cannot rename this item");
+      } else {
+        toast.error(`Failed to rename item: ${error?.message}`);
+      }
     }
   };
 
   const deleteItem = async (type, id) => {
-    if (type === "folders") {
-      await deleteDoc(doc(db, `workspaces/${workspaceId}/folders/${id}`));
-      const nestedFolders = folders.filter(
-        (folder) => folder.parentFolderId === id
-      );
-      for (const nestedFolder of nestedFolders) {
-        await deleteItem("folders", nestedFolder.id);
+    const confirmed = window.confirm(`Are you sure you want to delete this ${type === "folders" ? "folder" : "file"}?`);
+    if (!confirmed) return;
+
+    try {
+      if (type === "folders") {
+        await deleteDoc(doc(db, `workspaces/${workspaceId}/folders/${id}`));
+        
+        // Delete nested folders
+        const nestedFolders = folders.filter(
+          (folder) => folder.parentFolderId === id
+        );
+        for (const nestedFolder of nestedFolders) {
+          await deleteItem("folders", nestedFolder.id);
+        }
+        
+        // Delete files in folder
+        const folderFiles = files.filter((file) => file.folderId === id);
+        for (const file of folderFiles) {
+          await deleteDoc(doc(db, `workspaces/${workspaceId}/files/${file.id}`));
+        }
+        
+        toast.success("Folder deleted!");
+      } else {
+        await deleteDoc(doc(db, `workspaces/${workspaceId}/files/${id}`));
+        toast.success("File deleted!");
       }
-      const folderFiles = files.filter((file) => file.folderId === id);
-      for (const file of folderFiles) {
-        await deleteDoc(doc(db, `workspaces/${workspaceId}/files/${file.id}`));
+    } catch (error) {
+      // ✅ IMPROVED: Better error logging
+      console.error("Error deleting item:", {
+        message: error?.message,
+        code: error?.code,
+        fullError: error
+      });
+
+      if (error?.code === 'permission-denied') {
+        toast.error("Permission denied: You cannot delete this item");
+      } else {
+        toast.error(`Failed to delete item: ${error?.message}`);
       }
-    } else {
-      await deleteDoc(doc(db, `workspaces/${workspaceId}/files/${id}`));
     }
   };
 
@@ -180,7 +318,7 @@ const NavPanel = ({ workspaceId, openFile }) => {
     return (
       <div
         key={folder.id}
-        className=" ml-3 border-l border-gray-700"
+        className="ml-3 border-l border-gray-700"
         draggable
         onDragStart={(e) => handleDragStart(e, folder, "folder")}
         onDragOver={(e) => handleDragOver(e, folder.id)}
@@ -220,7 +358,7 @@ const NavPanel = ({ workspaceId, openFile }) => {
             <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100">
               <Folder
                 size={14}
-                className="text-blue-400 cursor-pointer"
+                className="text-blue-400 cursor-pointer hover:text-blue-300 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setCreatingType((prev) => (prev === "folder" ? null : "folder"));
@@ -228,10 +366,11 @@ const NavPanel = ({ workspaceId, openFile }) => {
                   setNewItemName("");
                   setFolderStates({ ...folderStates, [folder.id]: true });
                 }}
+                title="Create subfolder"
               />
               <File
                 size={14}
-                className="text-orange-400 cursor-pointer"
+                className="text-orange-400 cursor-pointer hover:text-orange-300 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setCreatingType((prev) => (prev === "file" ? null : "file"));
@@ -239,14 +378,16 @@ const NavPanel = ({ workspaceId, openFile }) => {
                   setNewItemName("");
                   setFolderStates({ ...folderStates, [folder.id]: true });
                 }}
+                title="Create file"
               />
               <Trash
                 size={14}
-                className="text-gray-400 hover:text-red-400 cursor-pointer"
+                className="text-gray-400 hover:text-red-400 cursor-pointer transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   deleteItem("folders", folder.id);
                 }}
+                title="Delete folder"
               />
             </div>
           )}
@@ -257,7 +398,7 @@ const NavPanel = ({ workspaceId, openFile }) => {
             {creatingType && creatingParentFolderId === folder.id && (
               <div className="ml-4 flex items-center px-2 py-1">
                 <input
-                  className="text-sm bg-gray-800 text-white px-2  py-1 rounded flex-1"
+                  className="text-sm bg-gray-800 text-white px-2 py-1 rounded flex-1"
                   placeholder={`New ${creatingType} name`}
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
@@ -303,11 +444,12 @@ const NavPanel = ({ workspaceId, openFile }) => {
                 {(userRole === "contributor" || userRole === "owner") && (
                   <Trash
                     size={14}
-                    className="text-gray-400 hover:text-red-400 cursor-pointer opacity-0 group-hover:opacity-100"
+                    className="text-gray-400 hover:text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteItem("files", file.id);
                     }}
+                    title="Delete file"
                   />
                 )}
               </div>
@@ -322,7 +464,7 @@ const NavPanel = ({ workspaceId, openFile }) => {
     <div className="bg-gray-900 text-gray-300 h-full w-full flex flex-col border-r border-gray-700">
       <div className="p-4 border-b border-gray-700">
         <h2 className="text-sm font-semibold mb-8 text-right">FILE EXPLORER</h2>
-        <div className="flex space-x-2 justify-start ">
+        <div className="flex space-x-2 justify-start">
           {(userRole === "contributor" || userRole === "owner") && (
             <div className="flex items-center gap-3">
               <button
@@ -331,9 +473,11 @@ const NavPanel = ({ workspaceId, openFile }) => {
                   setNewItemName("");
                   setCreatingType((prev) => (prev === "folder" ? null : "folder"));
                 }}
-                className="hover:bg-blue-700 bg-blue-500 bg-opacity-10 ring-1 ring-blue-500  px-2 py-1 rounded-md text-xs flex gap-1"
-              > Add folder
-                <Folder size={16} className="text-gray-400 " />
+                className="hover:bg-blue-700 bg-blue-500 bg-opacity-10 ring-1 ring-blue-500 px-2 py-1 rounded-md text-xs flex gap-1 transition-colors"
+                title="Create new folder"
+              >
+                Add folder
+                <Folder size={16} className="text-gray-400" />
               </button>
               <button
                 onClick={() => {
@@ -341,8 +485,10 @@ const NavPanel = ({ workspaceId, openFile }) => {
                   setNewItemName("");
                   setCreatingType((prev) => (prev === "file" ? null : "file"));
                 }}
-                className=" hover:bg-orange-700 bg-orange-500 bg-opacity-10 ring-1 ring-orange-400  px-2 py-1 rounded-md flex items-center text-xs gap-1"
-              >  Add file
+                className="hover:bg-orange-700 bg-orange-500 bg-opacity-10 ring-1 ring-orange-400 px-2 py-1 rounded-md flex items-center text-xs gap-1 transition-colors"
+                title="Create new file"
+              >
+                Add file
                 <File size={16} className="text-orange-400" />
               </button>
             </div>
@@ -410,11 +556,12 @@ const NavPanel = ({ workspaceId, openFile }) => {
               {(userRole === "contributor" || userRole === "owner") && (
                 <Trash
                   size={14}
-                  className="text-gray-400 hover:text-red-400 cursor-pointer opacity-0 group-hover:opacity-100"
+                  className="text-gray-400 hover:text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteItem("files", file.id);
                   }}
+                  title="Delete file"
                 />
               )}
             </div>
