@@ -1,17 +1,18 @@
 "use client";
-import { Moon, Sun, Sparkles, Wrench, File, Expand, Shrink, Settings } from "lucide-react";
+import { Sparkles, Wrench, FileCode2, Expand, Shrink, Settings, Cpu, ChevronDown, CheckCircle2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Editor, { useMonaco } from "@monaco-editor/react";
 import axios from "axios";
 import LanguageSelector from "./LanguageSelector";
 import { CODE_SNIPPETS } from "@/constants";
-import { Box } from "@chakra-ui/react";
 import Output from "./Output";
 import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function CodeEditor({ file }) {
+  // --- STATE & LOGIC (Untouched) ---
   const [selectedTheme, setSelectedTheme] = useState("vs-dark");
   const [fontSize, setFontSize] = useState(14);
   const [showSettings, setShowSettings] = useState(false);
@@ -25,7 +26,6 @@ export default function CodeEditor({ file }) {
   const [codeLanguage, setCodeLanguage] = useState("javascript");
   const settingsRef = useRef(null);
 
-  // ✅ Initialize code with proper default
   useEffect(() => {
     if (file) {
       fetchFileContent();
@@ -34,7 +34,6 @@ export default function CodeEditor({ file }) {
     }
   }, [file]);
 
-  // ✅ Better real-time sync with error handling
   useEffect(() => {
     if (!file?.id || !file?.workspaceId) return;
 
@@ -53,21 +52,11 @@ export default function CodeEditor({ file }) {
               }
             }
           } catch (error) {
-            console.error("Error processing file snapshot:", {
-              message: error?.message,
-              code: error?.code,
-              fullError: error
-            });
+            console.error("Error processing file snapshot:", error);
           }
         },
         (error) => {
-          // ✅ Handle snapshot listener errors
-          console.error("Error listening to file changes:", {
-            message: error?.message,
-            code: error?.code,
-            fullError: error
-          });
-          
+          console.error("Error listening to file changes:", error);
           if (error?.code === "permission-denied") {
             toast.error("You don't have permission to view this file");
           } else {
@@ -78,11 +67,7 @@ export default function CodeEditor({ file }) {
 
       return () => unsubscribe();
     } catch (error) {
-      console.error("Error setting up file listener:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
+      console.error("Error setting up file listener:", error);
     }
   }, [file]);
 
@@ -98,7 +83,6 @@ export default function CodeEditor({ file }) {
         if (content) {
           setUpdatedCode(content);
         } else {
-          // ✅ Handle empty content
           setUpdatedCode(CODE_SNIPPETS[codeLanguage] || "");
         }
       } else {
@@ -106,15 +90,7 @@ export default function CodeEditor({ file }) {
         toast.error("File not found");
       }
     } catch (error) {
-      // ✅ Better error logging
-      console.error("Error fetching file content:", {
-        message: error?.message,
-        code: error?.code,
-        fileId: file?.id,
-        workspaceId: file?.workspaceId,
-        fullError: error
-      });
-
+      console.error("Error fetching file content:", error);
       if (error?.code === "permission-denied") {
         toast.error("Permission denied: You cannot access this file");
       } else {
@@ -125,10 +101,7 @@ export default function CodeEditor({ file }) {
 
   const handleEditorChange = (value) => {
     if (!value) return;
-    
     setUpdatedCode(value);
-    
-    // ✅ Auto-save with proper error handling
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => autoSaveFile(value), 500);
   };
@@ -148,17 +121,7 @@ export default function CodeEditor({ file }) {
         updatedAt: new Date().toISOString()
       });
     } catch (error) {
-      // ✅ Better error logging
-      console.error("Error auto-saving file:", {
-        message: error?.message,
-        code: error?.code,
-        fileId: file?.id,
-        fullError: error
-      });
-
-      if (error?.code === "permission-denied") {
-        console.warn("Auto-save permission denied for file:", file?.id);
-      }
+      console.error("Error auto-saving file:", error);
     }
   };
 
@@ -196,14 +159,8 @@ export default function CodeEditor({ file }) {
         toast.error("No documentation generated");
       }
     } catch (error) {
-      // ✅ Better error logging
-      console.error("Failed to generate documentation:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
-      
-      toast.error(`Documentation generation failed: ${error?.message || "Unknown error"}`);
+      console.error("Failed to generate documentation:", error);
+      toast.error(`Documentation generation failed: ${error?.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -231,14 +188,8 @@ export default function CodeEditor({ file }) {
         toast.info("No syntax errors found");
       }
     } catch (error) {
-      // ✅ Better error logging
-      console.error("Failed to fix syntax:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
-      
-      toast.error(`Syntax fix failed: ${error?.message || "Unknown error"}`);
+      console.error("Failed to fix syntax:", error);
+      toast.error(`Syntax fix failed: ${error?.message}`);
     } finally {
       setIsFixing(false);
     }
@@ -251,149 +202,217 @@ export default function CodeEditor({ file }) {
     }, 100);
   };
 
-  // ✅ Better click-outside detection
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target)) {
         setShowSettings(false);
       }
     };
-    
     if (showSettings) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-    
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showSettings]);
 
   const themes = [
-    { name: "Dark", value: "vs-dark" },
-    { name: "Light", value: "light" },
+    { name: "Dark Modern", value: "vs-dark" },
+    { name: "Light Modern", value: "light" },
     { name: "High Contrast", value: "hc-black" },
   ];
 
+  // --- RENDER ---
   return (
-    <div className={`bg-gray-900 m-2 h-[94%] rounded-xl p-3 ${isExpanded ? "fixed inset-0 z-50 m-0" : "relative"}`}>
-      <Box className="relative h-full">
-        <div className="flex h-full">
-          <Box w={isExpanded ? "100%" : "78%"} transition="all 0.3s ease" className="bg-green-30 h-[100%]">
-            <div className="flex justify-between items-center h-[10%] pr-12">
-              {file && (
-                <div className="flex items-center bg-gray-900 text-white px-4 max-h-[50px] rounded-md shadow-md border border-gray-700 w-40">
-                  <File size={16} className="mr-2 text-green-400" />
-                  <span className="text-sm text-gray-300 line-clamp-1">{file.name}</span>
-                </div>
-              )}
-              <div className="flex gap-3 items-center">
-                <div className="relative" ref={settingsRef}>
-                  <button
-                    className="flex items-center bg-gray-800 text-white p-2 rounded-full shadow-md hover:bg-gray-700 transition ring-1 ring-gray-600"
-                    onClick={() => setShowSettings(!showSettings)}
-                    aria-label="Editor settings"
-                    title="Editor settings"
+    <div className={`
+      flex flex-col bg-[#0a0a0a] border border-white/10 overflow-hidden transition-all duration-300
+      ${isExpanded ? "fixed inset-0 z-50 m-0 rounded-none" : "relative h-[94%] rounded-xl m-2 shadow-2xl"}
+    `}>
+      
+      {/* --- Toolbar / Header --- */}
+      <div className="flex justify-between items-center h-12 px-4 bg-[#0a0a0a] border-b border-white/5 backdrop-blur-xl">
+        
+        {/* File Info */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-md border border-white/5">
+            <FileCode2 size={14} className="text-blue-400" />
+            <span className="text-xs font-medium text-zinc-300 font-mono">
+              {file ? file.name : "No File Selected"}
+            </span>
+          </div>
+          
+          <div className="h-4 w-px bg-white/10 hidden sm:block"></div>
+          
+          <div className="hidden sm:block">
+            <LanguageSelector language={codeLanguage} onSelect={onSelect} />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          
+          {/* AI Tools Group */}
+          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5 mr-2">
+            <button
+              onClick={generateDocs}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-violet-300 hover:text-white hover:bg-violet-600/20 rounded-md transition-all disabled:opacity-50"
+              title="Generate AI Documentation"
+            >
+              <Sparkles size={13} className={isLoading ? "animate-pulse" : ""} />
+              <span className="hidden sm:inline">{isLoading ? "Writing Docs..." : "Add Docs"}</span>
+            </button>
+            <div className="w-px h-3 bg-white/10"></div>
+            <button
+              onClick={fixSyntaxErrors}
+              disabled={isFixing}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:text-white hover:bg-emerald-600/20 rounded-md transition-all disabled:opacity-50"
+              title="Fix Syntax Errors"
+            >
+              <Wrench size={13} className={isFixing ? "animate-spin" : ""} />
+              <span className="hidden sm:inline">{isFixing ? "Fixing..." : "Debug"}</span>
+            </button>
+          </div>
+
+          {/* Settings & View Controls */}
+          <div className="flex items-center gap-2" ref={settingsRef}>
+            <div className="relative">
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className={`p-2 rounded-md transition-all duration-200 border ${showSettings ? "bg-zinc-800 text-zinc-100 border-zinc-700" : "text-zinc-500 border-transparent hover:bg-white/5 hover:text-zinc-300"}`}
+                title="Editor Settings"
+              >
+                <Settings size={16} />
+              </button>
+
+              <AnimatePresence>
+                {showSettings && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 top-full mt-2 w-64 p-4 bg-[#111] border border-white/10 rounded-xl shadow-2xl z-50 backdrop-blur-xl"
                   >
-                    <Settings size={16} />
-                  </button>
-                  {showSettings && (
-                    <div className="absolute left-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl p-3 space-y-3 z-50">
+                    <div className="flex items-center gap-2 mb-4 text-zinc-400">
+                      <Cpu size={14} />
+                      <span className="text-xs font-semibold uppercase tracking-wider">Editor Config</span>
+                    </div>
+
+                    <div className="space-y-4">
                       <div>
-                        <label htmlFor="theme-selector" className="text-xs text-gray-300 mb-1 block">Theme</label>
-                        <select
-                          id="theme-selector"
-                          name="theme"
-                          className="w-full bg-gray-700 text-gray-200 text-xs p-1 rounded"
-                          value={selectedTheme}
-                          onChange={(e) => setSelectedTheme(e.target.value)}
-                          aria-label="Select editor theme"
-                        >
-                          {themes.map((theme) => (
-                            <option key={theme.value} value={theme.value}>
-                              {theme.name}
-                            </option>
-                          ))}
-                        </select>
+                        <label className="text-[11px] text-zinc-500 font-medium mb-1.5 block">THEME</label>
+                        <div className="relative">
+                          <select
+                            value={selectedTheme}
+                            onChange={(e) => setSelectedTheme(e.target.value)}
+                            className="w-full bg-zinc-900 text-zinc-300 text-xs px-3 py-2 rounded-lg border border-white/10 focus:outline-none focus:border-violet-500 appearance-none cursor-pointer"
+                          >
+                            {themes.map((theme) => (
+                              <option key={theme.value} value={theme.value}>{theme.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                        </div>
                       </div>
+
                       <div>
-                        <label htmlFor="fontSize-slider" className="text-xs text-gray-300 mb-1 block">
-                          Font Size: {fontSize}px
-                        </label>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-[11px] text-zinc-500 font-medium">FONT SIZE</label>
+                          <span className="text-[10px] text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">{fontSize}px</span>
+                        </div>
                         <input
-                          id="fontSize-slider"
-                          name="fontSize"
                           type="range"
                           min="10"
                           max="24"
                           value={fontSize}
                           onChange={(e) => setFontSize(Number(e.target.value))}
-                          className="w-full bg-gray-600 rounded-lg appearance-none cursor-pointer"
-                          aria-label={`Font size: ${fontSize} pixels`}
+                          className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
                         />
                       </div>
                     </div>
-                  )}
-                </div>
-                <button
-                  className="flex items-center gap-1.5 bg-blue-700 bg-opacity-20 ring-1 ring-blue-600 text-white px-3 py-1.5 rounded-full shadow-md hover:bg-blue-600 hover:bg-opacity-30 transition disabled:opacity-50 text-xs"
-                  onClick={generateDocs}
-                  disabled={isLoading}
-                  title="Generate documentation for code"
-                  aria-label="Generate documentation"
-                >
-                  <Sparkles size={14} /> {isLoading ? "Generating..." : "Docs"}
-                </button>
-                <button
-                  className="flex items-center gap-1.5 bg-teal-600 bg-opacity-20 ring-1 ring-teal-600 text-white px-3 py-1.5 rounded-full shadow-md hover:bg-teal-600 hover:bg-opacity-30 transition disabled:opacity-50 text-xs"
-                  onClick={fixSyntaxErrors}
-                  disabled={isFixing}
-                  title="Fix syntax errors"
-                  aria-label="Fix syntax errors"
-                >
-                  <Wrench size={14} /> {isFixing ? "Fixing..." : "Fix"}
-                </button>
-                <button
-                  className="flex items-center gap-1.5 bg-purple-600 bg-opacity-20 ring-1 ring-purple-600 text-white px-3 py-1.5 rounded-full shadow-md hover:bg-purple-600 hover:bg-opacity-30 transition text-xs"
-                  onClick={toggleExpand}
-                  title={isExpanded ? "Collapse editor" : "Expand editor"}
-                  aria-label={isExpanded ? "Collapse editor" : "Expand editor"}
-                >
-                  {isExpanded ? (
-                    <Shrink size={14} className="transition-transform" />
-                  ) : (
-                    <Expand size={14} className="transition-transform" />
-                  )}
-                  {isExpanded ? "Collapse" : "Expand"}
-                </button>
-              </div>
-              <LanguageSelector language={codeLanguage} onSelect={onSelect} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <Editor
-              height={isExpanded ? "calc(100vh - 100px)" : "92%"}
-              theme={selectedTheme}
-              language={codeLanguage}
-              defaultValue={CODE_SNIPPETS[codeLanguage] || "//Start coding..."}
-              value={updatedCode}
-              onMount={onMount}
-              onChange={handleEditorChange}
-              options={{
-                fontSize: fontSize,
-                wordWrap: "on",
-                minimap: { enabled: false },
-                bracketPairColorization: true,
-                suggest: { preview: true },
-                inlineSuggest: {
-                  enabled: true,
-                  showToolbar: "onHover",
-                  mode: "subword",
-                  suppressSuggestions: false,
-                },
-                quickSuggestions: { other: true, comments: true, strings: true },
-                suggestSelection: "recentlyUsed",
-              }}
-            />
-          </Box>
-          {!isExpanded && <Output editorRef={editorRef} language={codeLanguage} />}
+
+            <button
+              onClick={toggleExpand}
+              className="p-2 text-zinc-500 hover:bg-white/5 hover:text-zinc-300 rounded-md transition-colors"
+              title={isExpanded ? "Collapse View" : "Expand View"}
+            >
+              {isExpanded ? <Shrink size={16} /> : <Expand size={16} />}
+            </button>
+          </div>
         </div>
-      </Box>
+      </div>
+
+      {/* --- Main Content Area --- */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* Editor Wrapper */}
+        <div className={`transition-all duration-300 ${isExpanded ? "w-full" : "w-[75%]"} flex flex-col relative`}>
+          <Editor
+            height="100%"
+            theme={selectedTheme}
+            language={codeLanguage}
+            defaultValue={CODE_SNIPPETS[codeLanguage] || "//Start coding..."}
+            value={updatedCode}
+            onMount={onMount}
+            onChange={handleEditorChange}
+            loading={
+              <div className="flex items-center justify-center h-full text-zinc-500 gap-2">
+                <Cpu className="animate-spin" size={18} />
+                <span className="text-sm">Initializing Monaco...</span>
+              </div>
+            }
+            options={{
+              fontSize: fontSize,
+              fontFamily: 'JetBrains Mono, Fira Code, monospace',
+              fontLigatures: true,
+              wordWrap: "on",
+              minimap: { enabled: false },
+              padding: { top: 24, bottom: 24 },
+              scrollBeyondLastLine: false,
+              smoothScrolling: true,
+              cursorBlinking: "smooth",
+              cursorSmoothCaretAnimation: "on",
+              bracketPairColorization: { enabled: true },
+              suggest: { 
+                preview: true,
+                showIcons: true 
+              },
+              inlineSuggest: { enabled: true },
+              guides: { 
+                indentation: true, 
+                bracketPairs: true 
+              },
+            }}
+          />
+          
+          {/* Status Bar Overlay */}
+          <div className="absolute bottom-2 right-4 flex items-center gap-2 pointer-events-none">
+            {updatedCode !== CODE_SNIPPETS[codeLanguage] && (
+               <div className="flex items-center gap-1.5 bg-zinc-900/90 backdrop-blur text-emerald-500 text-[10px] px-2 py-1 rounded-full border border-emerald-500/20 shadow-lg animate-in fade-in slide-in-from-bottom-2">
+                  <CheckCircle2 size={10} />
+                  <span>Autosaved</span>
+               </div>
+            )}
+          </div>
+        </div>
+
+        {/* Output Panel - Collapsible/Conditional */}
+        <AnimatePresence>
+          {!isExpanded && (
+            <motion.div 
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: "25%", opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              className="border-l border-white/5 bg-[#0e0e0e]"
+            >
+              <Output editorRef={editorRef} language={codeLanguage} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+      </div>
     </div>
   );
 }

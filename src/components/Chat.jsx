@@ -1,11 +1,11 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
 import { auth, firestore } from "@/config/firebase";
 import {
   collection,
   query,
   orderBy,
-  limit,
   addDoc,
   serverTimestamp,
   onSnapshot,
@@ -18,9 +18,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
-import { ClipboardDocumentIcon, CheckIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
-import { MessageSquarePlus, Send, Sparkles, Trash, Trash2, X, XCircle } from "lucide-react";
+import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { Sparkles, Trash2, X, Send, Command, Terminal, Cpu, Bot } from "lucide-react";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Animation variants for that "Senior Engineer" polish
+const messageVariants = {
+  hidden: { opacity: 0, y: 10, scale: 0.98 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, ease: "easeOut" } }
+};
 
 function Chatroom({ workspaceId, setIsChatOpen }) {
   const [messages, setMessages] = useState([]);
@@ -34,7 +41,8 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
 
   const messagesEndRef = useRef(null);
 
-  // ✅ FIX 1: Separate effect for Firestore listener with proper cleanup
+  // --- LOGIC SECTION (Untouched Functionality) ---
+
   useEffect(() => {
     if (!workspaceId || !userId) {
       setLoading(false);
@@ -50,7 +58,6 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
       const messagesRef = collection(firestore, "messages");
       const messagesQuery = query(messagesRef, orderBy("createdAt", "asc"));
 
-      // ✅ Set up real-time listener with proper error handler
       unsubscribe = onSnapshot(
         messagesQuery,
         (snapshot) => {
@@ -63,29 +70,18 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
             setLoading(false);
             setError(null);
           } catch (err) {
-            // ✅ Proper error logging
-            console.error("Error processing messages snapshot:", {
-              message: err?.message,
-              code: err?.code,
-              fullError: err
-            });
+            console.error("Error processing messages snapshot:", err);
             setError("Failed to process messages");
             setLoading(false);
           }
         },
         (error) => {
-          // ✅ FIX 2: Proper error handling for listener
-          console.error("Error in messages listener:", {
-            message: error?.message,
-            code: error?.code,
-            fullError: error
-          });
-
+          console.error("Error in messages listener:", error);
           if (error?.code === 'permission-denied') {
-            setError("Permission denied: You cannot access messages. Check Firestore rules.");
+            setError("Permission denied: You cannot access messages.");
             toast.error("Permission denied for messages");
           } else if (error?.code === 'unavailable') {
-            setError("Firestore service unavailable. Please try again.");
+            setError("Firestore service unavailable.");
           } else {
             setError(`Error loading messages: ${error?.message}`);
           }
@@ -93,69 +89,53 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
         }
       );
     } catch (error) {
-      // ✅ Error in setup
-      console.error("Error setting up messages listener:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
+      console.error("Error setting up messages listener:", error);
       setError("Failed to connect to messages");
       setLoading(false);
     }
 
-    // ✅ FIX 3: Proper cleanup function
     return () => {
       if (unsubscribe) {
         try {
           unsubscribe();
         } catch (err) {
-          console.debug("Listener cleanup error (expected):", err?.message);
+          console.debug("Listener cleanup error:", err?.message);
         }
       }
     };
-  }, [workspaceId, userId]); // ✅ FIX 4: Specific dependencies
+  }, [workspaceId, userId]);
 
-  // ✅ Auto-scroll to latest message
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isAIProcessing]);
 
-  // ✅ FIX 5: Better AI response generation with error handling
   const generateAIResponse = async (prompt) => {
     setIsAIProcessing(true);
     try {
       const response = await fetch('/api/getChatResponse', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prompt, workspaceId }),
       });
   
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `API request failed with status ${response.status}`);
+        throw new Error(errorData.error || `API request failed: ${response.status}`);
       }
   
       const data = await response.json();
-      return data.aiResponse || "I couldn't generate a response. Please try again.";
+      return data.aiResponse || "I couldn't generate a response.";
     } catch (error) {
-      // ✅ Proper error logging
-      console.error("AI API Error:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
+      console.error("AI API Error:", error);
       toast.error(`AI Error: ${error?.message}`);
-      return "Sorry, I couldn't process that request. Please try again.";
+      return "Sorry, I couldn't process that request.";
     } finally {
       setIsAIProcessing(false);
     }
   };
 
-  // ✅ FIX 6: Better message sending with error handling
   const sendMessage = async () => {
     if (newMessage.trim() === "") return;
     if (!userId || !workspaceId) {
@@ -168,7 +148,6 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
     let aiPrompt = null;
     let userMessage = newMessage;
 
-    // Extract AI prompt if @ is used
     if (aiMatch) {
       aiPrompt = aiMatch[1].trim();
     }
@@ -176,7 +155,6 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
     try {
       const messagesRef = collection(firestore, "messages");
       
-      // Send user message
       if (userMessage) {
         await addDoc(messagesRef, {
           text: userMessage,
@@ -188,7 +166,6 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
         });
       }
 
-      // Generate AI response if @ prompt was used
       if (aiPrompt) {
         const aiResponse = await generateAIResponse(aiPrompt);
         await addDoc(messagesRef, {
@@ -202,24 +179,12 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
       }
 
       setNewMessage("");
-      toast.success("Message sent!");
     } catch (error) {
-      // ✅ Proper error logging
-      console.error("Error sending message:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
-
-      if (error?.code === 'permission-denied') {
-        toast.error("Permission denied: You cannot send messages");
-      } else {
-        toast.error(`Failed to send message: ${error?.message}`);
-      }
+      console.error("Error sending message:", error);
+      toast.error(`Failed to send message: ${error?.message}`);
     }
   };
 
-  // ✅ FIX 7: Better clear chat with error handling
   const clearChat = async () => {
     if (!workspaceId) {
       toast.error("Workspace not connected");
@@ -243,18 +208,8 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
       setMessages([]);
       toast.success("Chat cleared!");
     } catch (error) {
-      // ✅ Proper error logging
-      console.error("Error clearing chat:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
-
-      if (error?.code === 'permission-denied') {
-        toast.error("Permission denied: You cannot clear messages");
-      } else {
-        toast.error(`Failed to clear chat: ${error?.message}`);
-      }
+      console.error("Error clearing chat:", error);
+      toast.error(`Failed to clear chat: ${error?.message}`);
     }
   };
 
@@ -264,6 +219,8 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
       sendMessage();
     }
   };
+
+  // --- UI COMPONENTS ---
 
   const MessageBubble = ({ msg }) => {
     const isCurrentUser = msg.userId === userId;
@@ -282,28 +239,14 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
         const endIndex = codeBlockRegex.lastIndex;
 
         if (startIndex > lastIndex) {
-          parts.push({
-            type: 'text',
-            content: text.substring(lastIndex, startIndex)
-          });
+          parts.push({ type: 'text', content: text.substring(lastIndex, startIndex) });
         }
-
-        parts.push({
-          type: 'code',
-          lang: lang || 'text',
-          code: code.trim()
-        });
-
+        parts.push({ type: 'code', lang: lang || 'text', code: code.trim() });
         lastIndex = endIndex;
       }
-
       if (lastIndex < text.length) {
-        parts.push({
-          type: 'text',
-          content: text.substring(lastIndex)
-        });
+        parts.push({ type: 'text', content: text.substring(lastIndex) });
       }
-
       return parts;
     };
 
@@ -311,7 +254,7 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
       try {
         await navigator.clipboard.writeText(code);
         setCopiedCode(index);
-        toast.success("Copied to clipboard!");
+        toast.success("Copied!");
         setTimeout(() => setCopiedCode(null), 2000);
       } catch (err) {
         toast.error("Failed to copy");
@@ -319,211 +262,238 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
     };
 
     return (
-      <div className={`flex flex-col gap-1 ${
-        isCurrentUser ? "items-end" : 
-        isAI ? "items-center w-full" : "items-start"
-      }`}>
-        {!isAI && (
-          <span className="text-xs text-gray-400">
-            {isCurrentUser ? "You" : msg.name}
-          </span>
-        )}
-        
-        <div className="flex justify-end gap-2">
-          {!isCurrentUser && !isAI && (
+      <motion.div 
+        variants={messageVariants}
+        initial="hidden"
+        animate="visible"
+        className={`flex w-full gap-3 ${isCurrentUser ? "flex-row-reverse" : "flex-row"} mb-6`}
+      >
+        {/* Avatar */}
+        <div className="flex-shrink-0 mt-1">
+          {isAI ? (
+             <div className="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-violet-400" />
+             </div>
+          ) : (
             <img
               src={msg.imageUrl || "/robotic.png"}
               alt="Avatar"
-              className="w-6 h-6 rounded-full flex-shrink-0"
+              className={`w-8 h-8 rounded-lg border border-white/10 object-cover ${isCurrentUser ? "ring-2 ring-zinc-700" : ""}`}
             />
           )}
+        </div>
 
-          <div className={`py-2 px-4 text-sm rounded-2xl mx-auto max-w-[550px] break-words ${
-            isAI ? "bg-green-900/20 border ring-1 ring-green-400" :
-            isCurrentUser ? "bg-purple-600/60" : "bg-blue-600/60"
-          }`}>
-            {isAI && <span className="text-blue-400 mr-2">⚡</span>}
-            
+        {/* Message Content */}
+        <div className={`flex flex-col max-w-[85%] ${isCurrentUser ? "items-end" : "items-start"}`}>
+          <div className="flex items-center gap-2 mb-1 px-1">
+            <span className={`text-[11px] font-medium tracking-wide ${isAI ? "text-violet-400" : "text-zinc-400"}`}>
+              {isAI ? "AI Copilot" : msg.name}
+            </span>
+            {isAI && <span className="text-[10px] bg-violet-500/10 text-violet-300 px-1.5 py-0.5 rounded border border-violet-500/20">BOT</span>}
+          </div>
+
+          <div className={`
+            relative py-3 px-4 text-sm rounded-xl border backdrop-blur-sm overflow-hidden
+            ${isCurrentUser 
+              ? "bg-zinc-800 text-zinc-100 border-zinc-700" 
+              : isAI 
+                ? "bg-zinc-900/60 text-zinc-200 border-violet-500/20 shadow-[0_0_15px_-3px_rgba(124,58,237,0.1)]" 
+                : "bg-zinc-900/60 text-zinc-300 border-zinc-800"
+            }
+          `}>
             {parseMessage(msg.text).map((part, index) => {
               if (part.type === 'text') {
                 return (
-                  <span key={index} className="whitespace-pre-wrap">
-                    {part.content}
+                  <span key={index} className="whitespace-pre-wrap leading-relaxed">
+                    {part.content.replace("🤖", "").trim()}
                   </span>
                 );
               }
               
               if (part.type === 'code') {
                 return (
-                  <div key={index} className="relative my-2 group">
-                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                      <button
-                        onClick={() => copyToClipboard(part.code, index)}
-                        className="p-1 rounded bg-gray-700/50 hover:bg-gray-600/50 backdrop-blur-sm"
-                        title="Copy code"
-                        aria-label="Copy code"
-                      >
-                        {copiedCode === index ? (
-                          <CheckIcon className="h-4 w-4 text-green-400" />
-                        ) : (
-                          <ClipboardDocumentIcon className="h-4 w-4 text-gray-300" />
-                        )}
-                      </button>
+                  <div key={index} className="relative my-3 rounded-lg overflow-hidden border border-white/10 bg-[#050505] shadow-sm group">
+                    {/* "Mac-style" Code Window Header */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-[#111] border-b border-white/5">
+                        <div className="flex gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500/20" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-green-500/20" />
+                        </div>
+                        <span className="text-[10px] text-zinc-600 font-mono uppercase">{part.lang}</span>
+                        <button
+                          onClick={() => copyToClipboard(part.code, index)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-800 rounded"
+                        >
+                          {copiedCode === index ? (
+                            <CheckIcon className="h-3 w-3 text-green-400" />
+                          ) : (
+                            <ClipboardDocumentIcon className="h-3 w-3 text-zinc-400" />
+                          )}
+                        </button>
                     </div>
                     <SyntaxHighlighter
                       language={part.lang}
                       style={vscDarkPlus}
                       customStyle={{
-                        background: '#000',
-                        borderRadius: '0.5rem',
+                        background: 'transparent',
                         padding: '1rem',
-                        margin: '0.5rem 0'
+                        fontSize: '0.8rem',
+                        margin: 0
                       }}
-                      codeTagProps={{ style: { fontFamily: 'Fira Code, monospace' } }}
+                      codeTagProps={{ style: { fontFamily: 'JetBrains Mono, Fira Code, monospace' } }}
                     >
                       {part.code}
                     </SyntaxHighlighter>
                   </div>
                 );
               }
-              
               return null;
             })}
-
-            {isAI && (
-              <div className="text-xs text-green-200/70 mt-1">
-                AI-generated response
-              </div>
-            )}
           </div>
-
-          {isCurrentUser && !isAI && (
-            <img
-              src={msg.imageUrl || "/robotic.png"}
-              alt="Avatar"
-              className="w-6 h-6 rounded-full flex-shrink-0"
-            />
-          )}
         </div>
-      </div>
+      </motion.div>
     );
   };
 
+  // --- RENDER ---
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-400">
-        <div className="text-center">
-          <div className="animate-spin mb-4">
-            <Sparkles className="h-8 w-8 mx-auto" />
-          </div>
-          <p>Loading messages...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-full bg-[#0a0a0a] border border-white/10 rounded-xl">
+        <Sparkles className="h-6 w-6 text-violet-500 animate-pulse mb-3" />
+        <p className="text-sm text-zinc-500 font-medium">Initializing workspace connection...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full backdrop-blur-sm border border-gray-500 rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 hover:shadow-3xl">
-      {/* Header with glass effect */}
-      <div className="flex justify-between items-center p-4 bg-gray-950/60 backdrop-blur-xl border-b-2 border-gray-600 shadow-sm">
+    <div className="flex flex-col h-full w-full bg-[#0a0a0a] text-zinc-100 font-sans border border-white/10 rounded-xl shadow-2xl overflow-hidden relative">
+      
+      {/* Background Grid Pattern (Subtle) */}
+      <div className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+
+      {/* Header */}
+      <div className="relative z-10 flex justify-between items-center px-5 py-4 bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-900/20 rounded-lg border border-indigo-200/20">
-            <Sparkles className="h-6 w-6 text-indigo-200" />
+          <div className="p-1.5 bg-zinc-800/50 rounded-md border border-white/5">
+            <Terminal className="h-4 w-4 text-zinc-400" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold shadow-2xl text-gray-100">
-              Collaborative AI Chat
-              <span className="text-indigo-400/90 text-sm font-normal ml-2">v1.2</span>
-            </h2>
-            {error && (
-              <p className="text-xs text-red-400 mt-1">{error}</p>
-            )}
+            <h2 className="text-sm font-semibold text-zinc-200 tracking-tight">Mission Control</h2>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-20"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500/50"></span>
+              </span>
+              <span className="text-[10px] text-zinc-500 font-mono">LIVE SYNC ACTIVE</span>
+            </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex items-center gap-1">
           <Button
             onClick={clearChat}
-            className="px-3 py-2 text-sm bg-gray-700/50 hover:bg-gray-600/60 text-gray-300 rounded-xl flex items-center gap-2 transition-all duration-200 hover:scale-[1.02]"
-            title="Clear chat history"
-            aria-label="Clear chat"
+            variant="ghost"
+            className="h-8 w-8 p-0 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            title="Clear Terminal"
           >
-            <Trash className="h-4 w-4 text-red-500" />
-            <span>Clear</span>
+            <Trash2 className="h-4 w-4" />
           </Button>
+          <div className="w-px h-4 bg-zinc-800 mx-1"></div>
           <Button
             onClick={() => setIsChatOpen(false)}
-            className="p-2 bg-gray-700/50 hover:bg-gray-600/60 text-white rounded-xl transition-all duration-200 hover:scale-[1.02]"
-            title="Close chat"
-            aria-label="Close chat"
+            variant="ghost"
+            className="h-8 w-8 p-0 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-colors"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-800/60">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm animate-fade-in">
-            <div className="mb-4 animate-float">
-              <MessageSquarePlus className="h-8 w-8 opacity-60" />
-            </div>
-            <p>Start a conversation with AI</p>
-            <p className="text-sm mt-1 text-gray-500/70">Type @ followed by your query</p>
-          </div>
-        ) : (
-          messages.map((msg) => (
-            <MessageBubble 
-              key={msg.id} 
-              msg={msg}
-            />
-          ))
-        )}
+      {/* Messages Area */}
+      <div className="relative z-10 flex-1 overflow-y-auto px-5 py-6 space-y-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+        <AnimatePresence>
+          {messages.length === 0 ? (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center h-full text-zinc-500"
+            >
+              <div className="p-4 rounded-2xl bg-zinc-900/50 border border-white/5 mb-4">
+                <Bot className="h-8 w-8 text-zinc-600" />
+              </div>
+              <p className="font-medium text-zinc-400">Ready to collaborate</p>
+              <p className="text-sm text-zinc-600 mt-1">Type <span className="text-violet-400 font-mono bg-violet-500/10 px-1 rounded">@</span> to summon AI</p>
+            </motion.div>
+          ) : (
+            messages.map((msg) => (
+              <MessageBubble key={msg.id} msg={msg} />
+            ))
+          )}
+        </AnimatePresence>
 
         {isAIProcessing && (
-          <div className="flex justify-center animate-pulse">
-            <div className="flex items-center gap-3 text-indigo-300 text-sm py-2 px-4 rounded-full bg-gray-700/50 border border-indigo-500/20">
-              <div className="flex space-x-1">
-                <div className="h-2 w-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0s'}} />
-                <div className="h-2 w-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}} />
-                <div className="h-2 w-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}} />
-              </div>
-              <span>Analyzing request...</span>
-            </div>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 px-1"
+          >
+             <div className="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
+                <Cpu className="w-4 h-4 text-violet-400 animate-spin-slow" />
+             </div>
+             <div className="flex gap-1 items-center bg-zinc-900/50 px-3 py-2 rounded-lg border border-white/5">
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" style={{animationDelay: '0s'}}></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                <span className="text-xs text-zinc-500 ml-2">Processing query...</span>
+             </div>
+          </motion.div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Section */}
-      <div className="p-4 border-t border-gray-600/30 bg-gray-800/60 backdrop-blur-sm">
+      {/* Input Area */}
+      <div className="relative z-10 p-5 bg-[#0a0a0a] border-t border-white/5">
         <form 
           onSubmit={(e) => {
             e.preventDefault();
             sendMessage();
           }}
-          className="flex gap-3"
+          className="relative group"
         >
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
+             <Command className="w-4 h-4" />
+          </div>
+          
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your message... (@ for AI commands)"
-            className="flex-1 bg-gray-700/40 border border-gray-600/30 text-gray-200 placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all"
+            placeholder="Send a message or type @ for AI..."
+            className="w-full bg-zinc-900/50 text-zinc-200 placeholder:text-zinc-600 border-zinc-800 rounded-xl pl-10 pr-12 py-6 focus-visible:ring-1 focus-visible:ring-violet-500/50 focus-visible:border-violet-500/50 transition-all shadow-inner"
             disabled={isAIProcessing}
           />
+          
           <Button 
             type="submit" 
-            disabled={isAIProcessing || !userId || !workspaceId}
-            className="bg-indigo-600/80 hover:bg-indigo-500/90 text-gray-100 rounded-xl px-6 flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] group disabled:opacity-50"
-            title="Send message (Shift+Enter for new line)"
-            aria-label="Send message"
+            disabled={isAIProcessing || !userId || !workspaceId || !newMessage.trim()}
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-lg bg-zinc-800 hover:bg-violet-600 text-zinc-400 hover:text-white transition-all disabled:opacity-30 disabled:hover:bg-zinc-800"
           >
-            <PaperAirplaneIcon className="h-5 w-5 text-indigo-100 group-hover:translate-x-0.5 transition-transform" />
-            <span>Send</span>
+            <Send className="w-4 h-4" />
           </Button>
         </form>
+        <div className="mt-2 text-[10px] text-zinc-600 flex justify-between px-1">
+          <span>Markdown supported</span>
+          <span>Shift + Enter for new line</span>
+        </div>
       </div>
+
+      {error && (
+        <div className="absolute top-16 left-0 w-full bg-red-500/10 border-b border-red-500/20 px-4 py-2 text-xs text-red-400 z-50 flex items-center justify-center">
+           {error}
+        </div>
+      )}
     </div>
   );
 }

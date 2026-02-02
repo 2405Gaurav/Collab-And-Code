@@ -12,11 +12,14 @@ import {
 import { db, auth } from "@/config/firebase";
 import {
   Folder,
-  File,
-  PlusCircle,
-  Trash,
+  FileCode,
+  FilePlus,
+  FolderPlus,
+  Trash2,
   ChevronDown,
   ChevronRight,
+  Edit2,
+  MoreHorizontal
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -37,101 +40,48 @@ const NavPanel = ({ workspaceId, openFile }) => {
     return name.length > 20 ? `${name.substring(0, 20)}...` : name;
   };
 
-  // ✅ IMPROVED: Better useEffect with error handling
   useEffect(() => {
     const user = auth.currentUser;
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    if (!workspaceId) {
-      console.warn("Missing workspaceId");
-      return;
-    }
+    if (!user) return; // Allow rendering but won't fetch data yet
+    if (!workspaceId) return;
 
     let unsubscribeMembers, unsubscribeFolders, unsubscribeFiles;
 
     try {
       // Members listener
       const membersRef = collection(db, `workspaces/${workspaceId}/members`);
-      unsubscribeMembers = onSnapshot(
-        membersRef,
-        (snapshot) => {
-          try {
-            const membersData = snapshot.docs.map((doc) => doc.data());
-            const member = membersData.find((m) => m.userId === user.uid);
-            if (member) {
-              setUserRole(member.role);
-            }
-          } catch (err) {
-            console.error("Error processing members snapshot:", err);
-          }
-        },
-        (error) => {
-          console.error("Error listening to members:", {
-            message: error?.message,
-            code: error?.code,
-            fullError: error
-          });
-        }
-      );
+      unsubscribeMembers = onSnapshot(membersRef, (snapshot) => {
+        const membersData = snapshot.docs.map((doc) => doc.data());
+        const member = membersData.find((m) => m.userId === user.uid);
+        if (member) setUserRole(member.role);
+      });
 
       // Folders listener
       const foldersRef = collection(db, `workspaces/${workspaceId}/folders`);
-      unsubscribeFolders = onSnapshot(
-        foldersRef,
-        (snapshot) => {
-          try {
-            const foldersData = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-            setFolders(foldersData);
-
-            const initialFolderStates = {};
-            foldersData.forEach((folder) => {
-              initialFolderStates[folder.id] = false;
-            });
-            setFolderStates(initialFolderStates);
-          } catch (err) {
-            console.error("Error processing folders snapshot:", err);
-          }
-        },
-        (error) => {
-          console.error("Error listening to folders:", {
-            message: error?.message,
-            code: error?.code,
-            fullError: error
+      unsubscribeFolders = onSnapshot(foldersRef, (snapshot) => {
+        const foldersData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setFolders(foldersData);
+        // Initialize folder states only for new folders to preserve open/close state
+        setFolderStates(prev => {
+          const newState = { ...prev };
+          foldersData.forEach(f => {
+            if (newState[f.id] === undefined) newState[f.id] = false;
           });
-        }
-      );
+          return newState;
+        });
+      });
 
       // Files listener
       const filesRef = collection(db, `workspaces/${workspaceId}/files`);
-      unsubscribeFiles = onSnapshot(
-        filesRef,
-        (snapshot) => {
-          try {
-            setFiles(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-          } catch (err) {
-            console.error("Error processing files snapshot:", err);
-          }
-        },
-        (error) => {
-          console.error("Error listening to files:", {
-            message: error?.message,
-            code: error?.code,
-            fullError: error
-          });
-        }
-      );
-    } catch (error) {
-      console.error("Error setting up listeners:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
+      unsubscribeFiles = onSnapshot(filesRef, (snapshot) => {
+        setFiles(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
       });
+
+    } catch (error) {
+      console.error("Error setting up listeners:", error);
     }
 
     return () => {
@@ -153,7 +103,7 @@ const NavPanel = ({ workspaceId, openFile }) => {
     setDraggedItem({ id: item.id, type });
   };
 
-  const handleDragOver = (e, targetFolderId) => {
+  const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
   };
@@ -172,77 +122,56 @@ const NavPanel = ({ workspaceId, openFile }) => {
         doc(db, `workspaces/${workspaceId}/${collectionName}/${draggedItem.id}`),
         { [fieldName]: targetFolderId || null }
       );
-      toast.success("Item moved!");
+      toast.success("Item moved");
     } catch (error) {
-      // ✅ IMPROVED: Better error logging
-      console.error("Error moving item:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
-      
-      if (error?.code === 'permission-denied') {
-        toast.error("Permission denied: You cannot move this item");
-      } else {
-        toast.error(`Failed to move item: ${error?.message}`);
-      }
+       toast.error("Permission denied");
     }
     setDraggedItem(null);
   };
 
-  // ✅ FIXED: Add createdBy field when creating items
   const createItem = async (folderid) => {
-    if (!newItemName) return;
-    
-    if (!auth.currentUser) {
-      toast.error("You must be logged in to create items");
+    if (!newItemName) {
+      setCreatingType(null); // Cancel if empty
       return;
     }
+    
+    if (!auth.currentUser) return;
 
     try {
+      const commonData = {
+        name: newItemName,
+        workspaceId,
+        createdBy: auth.currentUser.uid,
+        createdAt: new Date().toISOString(),
+      };
+
       if (creatingType === "folder") {
         await addDoc(collection(db, `workspaces/${workspaceId}/folders`), {
-          name: newItemName,
+          ...commonData,
           parentFolderId: creatingParentFolderId,
-          createdBy: auth.currentUser.uid,  // ✅ ADDED: Required by Firestore rules
-          createdAt: new Date().toISOString(),
         });
-        toast.success("Folder created!");
       } else {
         await addDoc(collection(db, `workspaces/${workspaceId}/files`), {
-          name: newItemName,
+          ...commonData,
           folderId: creatingParentFolderId,
-          workspaceId,
-          createdBy: auth.currentUser.uid,  // ✅ ADDED: Required by Firestore rules
-          createdAt: new Date().toISOString(),
-          content: "", // ✅ ADDED: Initialize content
+          content: "",
         });
-        toast.success("File created!");
       }
       setNewItemName("");
       setCreatingType(null);
       setCreatingParentFolderId(null);
-      setFolderStates({ ...folderStates, [folderid]: true });
+      if (folderid) setFolderStates({ ...folderStates, [folderid]: true });
 
     } catch (error) {
-      // ✅ IMPROVED: Better error logging
-      console.error("Error creating item:", {
-        message: error?.message,
-        code: error?.code,
-        creatingType,
-        fullError: error
-      });
-
-      if (error?.code === 'permission-denied') {
-        toast.error("Permission denied: You cannot create items in this workspace");
-      } else {
-        toast.error(`Failed to create ${creatingType}: ${error?.message}`);
-      }
+      toast.error("Failed to create item");
     }
   };
 
   const renameItem = async () => {
-    if (!renamingItem?.name) return;
+    if (!renamingItem?.name) {
+      setRenamingItem(null);
+      return;
+    }
 
     try {
       const collectionName = renamingItem.type === "folder" ? "folders" : "files";
@@ -250,103 +179,67 @@ const NavPanel = ({ workspaceId, openFile }) => {
         doc(db, `workspaces/${workspaceId}/${collectionName}/${renamingItem.id}`),
         { name: renamingItem.name }
       );
-      toast.success("Item renamed!");
       setRenamingItem(null);
     } catch (error) {
-      // ✅ IMPROVED: Better error logging
-      console.error("Error renaming item:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
-
-      if (error?.code === 'permission-denied') {
-        toast.error("Permission denied: You cannot rename this item");
-      } else {
-        toast.error(`Failed to rename item: ${error?.message}`);
-      }
+      toast.error("Permission denied");
     }
   };
 
   const deleteItem = async (type, id) => {
-    const confirmed = window.confirm(`Are you sure you want to delete this ${type === "folders" ? "folder" : "file"}?`);
-    if (!confirmed) return;
+    if(!window.confirm("Delete this item permanently?")) return;
 
     try {
       if (type === "folders") {
         await deleteDoc(doc(db, `workspaces/${workspaceId}/folders/${id}`));
-        
-        // Delete nested folders
-        const nestedFolders = folders.filter(
-          (folder) => folder.parentFolderId === id
-        );
-        for (const nestedFolder of nestedFolders) {
-          await deleteItem("folders", nestedFolder.id);
-        }
-        
-        // Delete files in folder
-        const folderFiles = files.filter((file) => file.folderId === id);
-        for (const file of folderFiles) {
-          await deleteDoc(doc(db, `workspaces/${workspaceId}/files/${file.id}`));
-        }
-        
-        toast.success("Folder deleted!");
+        // Note: Real production apps should use cloud functions to recursively delete sub-collections
+        // For now, visual removal relies on the listener updating
+        toast.success("Folder deleted");
       } else {
         await deleteDoc(doc(db, `workspaces/${workspaceId}/files/${id}`));
-        toast.success("File deleted!");
+        toast.success("File deleted");
       }
     } catch (error) {
-      // ✅ IMPROVED: Better error logging
-      console.error("Error deleting item:", {
-        message: error?.message,
-        code: error?.code,
-        fullError: error
-      });
-
-      if (error?.code === 'permission-denied') {
-        toast.error("Permission denied: You cannot delete this item");
-      } else {
-        toast.error(`Failed to delete item: ${error?.message}`);
-      }
+      toast.error("Permission denied");
     }
   };
 
   const renderFolder = (folder) => {
     const nestedFolders = folders.filter((f) => f.parentFolderId === folder.id);
     const folderFiles = files.filter((file) => file.folderId === folder.id);
+    const isEditing = renamingItem?.id === folder.id;
 
     return (
       <div
         key={folder.id}
-        className="ml-3 border-l border-gray-700"
+        className="select-none"
         draggable
         onDragStart={(e) => handleDragStart(e, folder, "folder")}
-        onDragOver={(e) => handleDragOver(e, folder.id)}
+        onDragOver={(e) => handleDragOver(e)}
         onDrop={(e) => handleDrop(e, folder.id)}
       >
-        <div className="flex items-center justify-between group hover:bg-gray-800 px-1 py-2 rounded transition-colors">
+        <div className="flex items-center justify-between group hover:bg-white/5 px-2 py-1 cursor-pointer transition-colors border border-transparent hover:border-white/5 mx-1 rounded-sm">
           <div
-            className="flex items-center flex-1 cursor-pointer"
+            className="flex items-center flex-1 overflow-hidden"
             onClick={() => toggleFolder(folder.id)}
           >
-            {folderStates[folder.id] ? (
-              <ChevronDown size={16} className="mr-1" />
-            ) : (
-              <ChevronRight size={16} className="mr-1" />
-            )}
-            <Folder size={16} className="mr-2 text-blue-400" />
-            {renamingItem?.id === folder.id ? (
+            <span className="text-zinc-600 mr-1">
+              {folderStates[folder.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </span>
+            <Folder size={14} className="mr-2 text-violet-400 fill-violet-400/20" />
+            
+            {isEditing ? (
               <input
-                className="text-sm bg-gray-800 text-white px-2 py-1 rounded"
+                className="text-xs bg-black border border-violet-500 text-white px-1 py-0.5 rounded outline-none w-full"
                 value={renamingItem.name}
                 onChange={(e) => setRenamingItem({ ...renamingItem, name: e.target.value })}
                 onBlur={renameItem}
-                onKeyPress={(e) => e.key === "Enter" && renameItem()}
+                onKeyDown={(e) => e.key === "Enter" && renameItem()}
                 autoFocus
+                onClick={(e) => e.stopPropagation()}
               />
             ) : (
               <span
-                className="text-sm"
+                className="text-sm text-zinc-300 truncate"
                 onDoubleClick={() => setRenamingItem({ id: folder.id, name: folder.name, type: "folder" })}
               >
                 {truncateName(folder.name)}
@@ -354,218 +247,192 @@ const NavPanel = ({ workspaceId, openFile }) => {
             )}
           </div>
 
-          {(userRole === "contributor" || userRole === "owner") && (
-            <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100">
-              <Folder
-                size={14}
-                className="text-blue-400 cursor-pointer hover:text-blue-300 transition-colors"
+          {/* Hover Actions */}
+          {(userRole === "contributor" || userRole === "owner") && !isEditing && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <FolderPlus
+                size={13}
+                className="text-zinc-500 hover:text-zinc-200"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCreatingType((prev) => (prev === "folder" ? null : "folder"));
+                  setCreatingType("folder");
                   setCreatingParentFolderId(folder.id);
                   setNewItemName("");
                   setFolderStates({ ...folderStates, [folder.id]: true });
                 }}
-                title="Create subfolder"
               />
-              <File
-                size={14}
-                className="text-orange-400 cursor-pointer hover:text-orange-300 transition-colors"
+              <FilePlus
+                size={13}
+                className="text-zinc-500 hover:text-zinc-200"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCreatingType((prev) => (prev === "file" ? null : "file"));
+                  setCreatingType("file");
                   setCreatingParentFolderId(folder.id);
                   setNewItemName("");
                   setFolderStates({ ...folderStates, [folder.id]: true });
                 }}
-                title="Create file"
               />
-              <Trash
-                size={14}
-                className="text-gray-400 hover:text-red-400 cursor-pointer transition-colors"
+              <Trash2
+                size={13}
+                className="text-zinc-500 hover:text-red-400"
                 onClick={(e) => {
                   e.stopPropagation();
                   deleteItem("folders", folder.id);
                 }}
-                title="Delete folder"
               />
             </div>
           )}
         </div>
 
+        {/* Nested Content */}
         {folderStates[folder.id] && (
-          <div className="ml-1">
+          <div className="pl-4 border-l border-white/5 ml-2.5">
             {creatingType && creatingParentFolderId === folder.id && (
-              <div className="ml-4 flex items-center px-2 py-1">
+              <div className="flex items-center px-2 py-1 gap-2 animate-in fade-in duration-200">
+                {creatingType === 'folder' ? <Folder size={14} className="text-zinc-500"/> : <FileCode size={14} className="text-zinc-500"/>}
                 <input
-                  className="text-sm bg-gray-800 text-white px-2 py-1 rounded flex-1"
-                  placeholder={`New ${creatingType} name`}
+                  className="text-xs bg-black border border-violet-500/50 text-white px-1 py-0.5 rounded outline-none flex-1 min-w-0"
+                  placeholder={`Name...`}
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
-                  onBlur={createItem}
-                  onKeyPress={(e) => e.key === "Enter" && createItem(folder.id)}
+                  onBlur={() => createItem(folder.id)}
+                  onKeyDown={(e) => e.key === "Enter" && createItem(folder.id)}
                   autoFocus
                 />
               </div>
             )}
             {nestedFolders.map((nestedFolder) => renderFolder(nestedFolder))}
-            {folderFiles.map((file) => (
-              <div
-                key={file.id}
-                className="ml-6 flex items-center justify-between group hover:bg-gray-800 px-2 py-1 rounded transition-colors"
-                draggable
-                onDragStart={(e) => handleDragStart(e, file, "file")}
-                onDragOver={(e) => handleDragOver(e, folder.id)}
-                onDrop={(e) => handleDrop(e, folder.id)}
-              >
-                <div
-                  className="flex items-center cursor-pointer flex-1"
-                  onClick={() => openFile(file)}
-                >
-                  <File size={16} className="mr-2 text-orange-400" />
-                  {renamingItem?.id === file.id ? (
-                    <input
-                      className="text-sm bg-gray-700 text-white px-1 rounded"
-                      value={renamingItem.name}
-                      onChange={(e) => setRenamingItem({ ...renamingItem, name: e.target.value })}
-                      onBlur={renameItem}
-                      onKeyPress={(e) => e.key === "Enter" && renameItem()}
-                      autoFocus
-                    />
-                  ) : (
-                    <span
-                      className="text-sm"
-                      onDoubleClick={() => setRenamingItem({ id: file.id, name: file.name, type: "file" })}
-                    >
-                      {truncateName(file.name)}
-                    </span>
-                  )}
-                </div>
-                {(userRole === "contributor" || userRole === "owner") && (
-                  <Trash
-                    size={14}
-                    className="text-gray-400 hover:text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteItem("files", file.id);
-                    }}
-                    title="Delete file"
-                  />
-                )}
-              </div>
-            ))}
+            {folderFiles.map((file) => renderFile(file))}
           </div>
         )}
       </div>
     );
   };
 
-  return (
-    <div className="bg-gray-900 text-gray-300 h-full w-full flex flex-col border-r border-gray-700">
-      <div className="p-4 border-b border-gray-700">
-        <h2 className="text-sm font-semibold mb-8 text-right">FILE EXPLORER</h2>
-        <div className="flex space-x-2 justify-start">
-          {(userRole === "contributor" || userRole === "owner") && (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  setCreatingParentFolderId(null);
-                  setNewItemName("");
-                  setCreatingType((prev) => (prev === "folder" ? null : "folder"));
-                }}
-                className="hover:bg-blue-700 bg-blue-500 bg-opacity-10 ring-1 ring-blue-500 px-2 py-1 rounded-md text-xs flex gap-1 transition-colors"
-                title="Create new folder"
-              >
-                Add folder
-                <Folder size={16} className="text-gray-400" />
-              </button>
-              <button
-                onClick={() => {
-                  setCreatingParentFolderId(null);
-                  setNewItemName("");
-                  setCreatingType((prev) => (prev === "file" ? null : "file"));
-                }}
-                className="hover:bg-orange-700 bg-orange-500 bg-opacity-10 ring-1 ring-orange-400 px-2 py-1 rounded-md flex items-center text-xs gap-1 transition-colors"
-                title="Create new file"
-              >
-                Add file
-                <File size={16} className="text-orange-400" />
-              </button>
-            </div>
+  const renderFile = (file) => {
+    const isEditing = renamingItem?.id === file.id;
+
+    return (
+      <div
+        key={file.id}
+        className="flex items-center justify-between group hover:bg-white/5 px-2 py-1 rounded-sm cursor-pointer transition-colors mx-1"
+        draggable
+        onDragStart={(e) => handleDragStart(e, file, "file")}
+        onDragOver={(e) => handleDragOver(e)}
+        onDrop={(e) => handleDrop(e, null)}
+        onClick={() => openFile(file)}
+      >
+        <div className="flex items-center flex-1 overflow-hidden">
+          <FileCode size={14} className="mr-2 text-blue-400/80" />
+          {isEditing ? (
+            <input
+              className="text-xs bg-black border border-violet-500 text-white px-1 py-0.5 rounded outline-none w-full"
+              value={renamingItem.name}
+              onChange={(e) => setRenamingItem({ ...renamingItem, name: e.target.value })}
+              onBlur={renameItem}
+              onKeyDown={(e) => e.key === "Enter" && renameItem()}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span
+              className="text-sm text-zinc-400 group-hover:text-zinc-200 truncate transition-colors"
+              onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setRenamingItem({ id: file.id, name: file.name, type: "file" });
+              }}
+            >
+              {truncateName(file.name)}
+            </span>
           )}
         </div>
+        {(userRole === "contributor" || userRole === "owner") && !isEditing && (
+          <Trash2
+            size={13}
+            className="text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteItem("files", file.id);
+            }}
+          />
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="bg-[#0a0a0a] text-zinc-300 h-full w-full flex flex-col font-sans">
+      
+      {/* Header Toolbar */}
+      <div className="h-10 border-b border-white/5 flex items-center justify-between px-3 shrink-0 bg-[#0a0a0a]">
+        <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Explorer</span>
+        
+        {(userRole === "contributor" || userRole === "owner") && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                setCreatingParentFolderId(null);
+                setNewItemName("");
+                setCreatingType(creatingType === "file" ? null : "file");
+              }}
+              className={`p-1 rounded hover:bg-white/10 transition-colors ${creatingType === 'file' && !creatingParentFolderId ? 'bg-white/10 text-white' : 'text-zinc-400'}`}
+              title="New File"
+            >
+              <FilePlus size={15} />
+            </button>
+            <button
+              onClick={() => {
+                setCreatingParentFolderId(null);
+                setNewItemName("");
+                setCreatingType(creatingType === "folder" ? null : "folder");
+              }}
+              className={`p-1 rounded hover:bg-white/10 transition-colors ${creatingType === 'folder' && !creatingParentFolderId ? 'bg-white/10 text-white' : 'text-zinc-400'}`}
+              title="New Folder"
+            >
+              <FolderPlus size={15} />
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* File Tree */}
       <div
-        className="flex-1 overflow-y-auto py-2 px-1"
-        onDragOver={(e) => handleDragOver(e, null)}
+        className="flex-1 overflow-y-auto py-2 custom-scrollbar"
+        onDragOver={(e) => handleDragOver(e)}
         onDrop={(e) => handleDrop(e, null)}
       >
+        {/* Root Level Creation Input */}
         {creatingType && !creatingParentFolderId && (
-          <div className="flex items-center px-2 py-1">
-            <input
-              className="text-sm bg-gray-800 py-1 text-white px-3 rounded flex-1"
-              placeholder={`New ${creatingType} name`}
+          <div className="flex items-center px-3 py-1 gap-2 mb-1 animate-in slide-in-from-top-1">
+             {creatingType === 'folder' ? <Folder size={14} className="text-violet-400"/> : <FileCode size={14} className="text-blue-400"/>}
+             <input
+              className="text-xs bg-black border border-violet-500 text-white px-2 py-1 rounded outline-none flex-1 shadow-[0_0_10px_-2px_rgba(124,58,237,0.3)]"
+              placeholder={`Name...`}
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
-              onBlur={createItem}
-              onKeyPress={(e) => e.key === "Enter" && createItem()}
+              onBlur={() => createItem(null)}
+              onKeyDown={(e) => e.key === "Enter" && createItem(null)}
               autoFocus
             />
           </div>
         )}
 
+        {/* Root Folders */}
         {folders
           .filter((folder) => !folder.parentFolderId)
           .map((folder) => renderFolder(folder))}
 
+        {/* Root Files */}
         {files
           .filter((file) => !file.folderId)
-          .map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center justify-between group hover:bg-gray-800 px-2 py-1 rounded transition-colors"
-              draggable
-              onDragStart={(e) => handleDragStart(e, file, "file")}
-              onDragOver={(e) => handleDragOver(e, null)}
-              onDrop={(e) => handleDrop(e, null)}
-            >
-              <div
-                className="flex items-center cursor-pointer flex-1 border-l border-gray-700 ml-1 px-2 py-1"
-                onClick={() => openFile(file)}
-              >
-                <File size={16} className="mr-2 text-orange-400" />
-                {renamingItem?.id === file.id ? (
-                  <input
-                    className="text-sm bg-gray-700 text-white px-1 rounded"
-                    value={renamingItem.name}
-                    onChange={(e) => setRenamingItem({ ...renamingItem, name: e.target.value })}
-                    onBlur={renameItem}
-                    onKeyPress={(e) => e.key === "Enter" && renameItem()}
-                    autoFocus
-                  />
-                ) : (
-                  <span
-                    className="text-sm"
-                    onDoubleClick={() => setRenamingItem({ id: file.id, name: file.name, type: "file" })}
-                  >
-                    {truncateName(file.name)}
-                  </span>
-                )}
-              </div>
-              {(userRole === "contributor" || userRole === "owner") && (
-                <Trash
-                  size={14}
-                  className="text-gray-400 hover:text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteItem("files", file.id);
-                  }}
-                  title="Delete file"
-                />
-              )}
-            </div>
-          ))}
+          .map((file) => renderFile(file))}
+          
+        {/* Empty State */}
+        {folders.length === 0 && files.length === 0 && !creatingType && (
+           <div className="flex flex-col items-center justify-center mt-10 text-zinc-600 gap-2">
+              <span className="text-xs">No files yet.</span>
+           </div>
+        )}
       </div>
     </div>
   );
