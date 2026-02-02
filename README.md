@@ -1,179 +1,421 @@
-# 🚀 Haxplore - AI-Powered Collaborative Code Editor
+# 🚀 Collab and Code - AI-Powered Collaborative Code Editor
 
 <div align="center">
 
-![Haxplore Banner](https://img.shields.io/badge/Haxplore-AI%20Code%20Editor-blue?style=for-the-badge&logo=visual-studio-code)
-![Next.js](https://img.shields.io/badge/Next.js-15.1.6-black?style=for-the-badge&logo=next.js)
-![React](https://img.shields.io/badge/React-18.3.1-blue?style=for-the-badge&logo=react)
-![Firebase](https://img.shields.io/badge/Firebase-11.2.0-orange?style=for-the-badge&logo=firebase)
+![Collab and Code Banner](https://img.shields.io/badge/Collab%20and%20Code-AI%20Code%20Editor-6366f1?style=for-the-badge&logo=visual-studio-code&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16.1.6-000000?style=for-the-badge&logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-18.3.1-61dafb?style=for-the-badge&logo=react&logoColor=black)
+![Firebase](https://img.shields.io/badge/Firebase-11.2.0-ffca28?style=for-the-badge&logo=firebase&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178c6?style=for-the-badge&logo=typescript&logoColor=white)
 
-**Revolutionize your coding experience with real-time collaboration and AI assistance**
+**Transform your coding workflow with real-time collaboration, AI-powered assistance, and seamless team synchronization**
 
-[Live Demo](#) • [Documentation](#) • [Report Bug](#) • [Request Feature](#)
+[🌐 Live Demo](https://collabandcode.vercel.app) • [📖 Documentation](#-quick-start-guide) • [🐛 Report Bug](https://github.com/2405Gaurav/Collab-And-Code/issues) • [✨ Request Feature](https://github.com/2405Gaurav/Collab-And-Code/issues)
 
 </div>
 
 ---
 
-## ✨ Features
+## 🌟 Why Collab and Code?
+
+Collab and Code isn't just another code editor—it's a complete collaborative development platform that brings your team together. Whether you're pair programming, conducting code reviews, or teaching programming concepts, Collab and Code provides the tools you need to succeed.
+
+### 🎯 Perfect For
+- 👥 **Remote Teams** - Collaborate as if you're in the same room
+- 🎓 **Educators** - Teach coding in real-time with students
+- 💼 **Technical Interviews** - Conduct live coding assessments
+- 🚀 **Hackathons** - Build projects together seamlessly
+- 📚 **Code Reviews** - Review and discuss code in real-time
+
+---
+
+## ✨ Core Features
 
 ### 🤝 Real-Time Collaboration
-- **Live Cursor Tracking** - See where your teammates are coding in real-time
-- **Instant File Sync** - Changes appear instantly across all users
-- **Built-in Team Chat** - Communicate without leaving the editor
-- **Workspace Invitations** - Seamlessly invite team members
+- **Live Cursor Tracking** 
+  - See exactly where your teammates are typing
+  - Color-coded cursors with user names
+  - Smooth, lag-free cursor movements
+  
+- **Instant File Synchronization** 
+  - Changes appear in milliseconds across all users
+  - Conflict-free editing with operational transformation
+  - Auto-save and version history
+  
+- **Integrated Team Chat** 
+  - Context-aware AI chatbot for coding assistance
+  - Real-time messaging without leaving the editor
+  - Code snippet sharing in chat
+  
+- **Smart Workspace Management** 
+  - Public and private workspace options
+  - Role-based permissions (Owner, Contributor)
+  - Secure invitation system with email verification
 
-### 🤖 AI-Powered Assistance
-- **Smart Code Completion** - Get intelligent suggestions as you type
-- **Real-time Error Detection** - Catch bugs before they happen
-- **Auto Documentation** - Generate comprehensive code docs instantly
-- **AI Chatbot** - Ask questions and get instant coding help
+### 🤖 AI-Powered Intelligence
 
-### 🛠️ Advanced Editor Features
-- **Multi-language Support** - Syntax highlighting for 50+ languages
-- **Recursive File Navigation** - Manage complex folder structures effortlessly
-- **Drag & Drop Organization** - Intuitive file and folder management
-- **Customizable Themes** - Personalize your coding environment
+- **Smart Auto-Completion** 
+  - Context-aware code suggestions powered by Google Gemini
+  - Multi-language support with intelligent predictions
+  - Learn from your coding patterns
+  
+- **Real-Time Error Detection** 
+  - Catch syntax errors before you save
+  - Intelligent error messages and fix suggestions
+  - Language-specific linting and validation
+  
+- **Automatic Documentation Generator** 
+  - Generate comprehensive function/class documentation
+  - Support for JSDoc, Python docstrings, and more
+  - One-click documentation updates
+  
+- **AI Code Assistant** 
+  - Ask questions about your code in natural language
+  - Get debugging help and optimization suggestions
+  - Explain complex code segments instantly
 
-### 🔐 Enterprise Security
-- **Google OAuth Integration** - Secure authentication with Google accounts
-- **Email/OTP Verification** - Additional security layer for workspace access
-- **Role-based Access Control** - Manage permissions and workspace security
-- **Real-time Data Sync** - Firebase-powered reliable synchronization
+### 🎨 Advanced Editor Capabilities
+
+- **Professional Code Editor**
+  - Powered by Monaco Editor (VS Code's engine)
+  - Syntax highlighting for 50+ programming languages
+  - IntelliSense and code navigation
+  - Customizable themes (Light, Dark, High Contrast)
+  
+- **Intelligent File Management**
+  - Recursive folder structure support
+  - Drag-and-drop file organization
+  - Quick file search and navigation
+  - File tree with collapsible folders
+  
+- **Developer-Friendly Interface**
+  - Split-pane layout for multitasking
+  - Keyboard shortcuts for power users
+  - Breadcrumb navigation
+  - Minimap for code overview
+
+### 🔐 Enterprise-Grade Security
+
+- **Multiple Authentication Methods**
+  - Google OAuth 2.0 integration
+  - Email/Password with OTP verification
+  - Secure session management
+  
+- **Data Protection**
+  - End-to-end encrypted workspace data
+  - Firebase security rules enforcement
+  - Role-based access control (RBAC)
+  
+- **Workspace Privacy**
+  - Private workspaces for sensitive projects
+  - Invitation-only access control
+  - Activity logging and audit trails
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Technology Stack
 
 <div align="center">
 
-| Frontend | Backend | AI Services | Database | Authentication |
-|----------|---------|-------------|----------|----------------|
-| ![Next.js](https://img.shields.io/badge/Next.js-15.1.6-black?style=flat-square&logo=next.js) | ![Firebase](https://img.shields.io/badge/Firebase-11.2.0-orange?style=flat-square&logo=firebase) | ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-API-blue?style=flat-square&logo=google) | ![Firebase Realtime](https://img.shields.io/badge/Firebase%20Realtime-Database-orange?style=flat-square&logo=firebase) | ![Firebase Auth](https://img.shields.io/badge/Firebase%20Auth-Google%20OAuth-orange?style=flat-square&logo=firebase) |
-| ![React](https://img.shields.io/badge/React-18.3.1-blue?style=flat-square&logo=react) | ![Monaco Editor](https://img.shields.io/badge/Monaco%20Editor-4.6.0-blue?style=flat-square&logo=visual-studio-code) | ![AI Chatbot](https://img.shields.io/badge/AI%20Chatbot-Interactive-green?style=flat-square) | ![Firestore](https://img.shields.io/badge/Firestore-Database-orange?style=flat-square&logo=firebase) | ![OTP](https://img.shields.io/badge/Email%20OTP-Verification-green?style=flat-square) |
-| ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3.4.1-38B2AC?style=flat-square&logo=tailwind-css) | ![Shadcn UI](https://img.shields.io/badge/Shadcn%20UI-Components-black?style=flat-square) | ![Code Linting](https://img.shields.io/badge/Code%20Linting-Real--time-yellow?style=flat-square) | ![Real-time Sync](https://img.shields.io/badge/Real--time%20Sync-Instant-green?style=flat-square) | ![Workspace Security](https://img.shields.io/badge/Workspace%20Security-Role--based-red?style=flat-square) |
+### Frontend Technologies
+![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React-18.3.1-61dafb?style=flat-square&logo=react)
+![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4.1-38bdf8?style=flat-square&logo=tailwind-css)
+![Monaco Editor](https://img.shields.io/badge/Monaco-0.52.2-0078d7?style=flat-square&logo=visual-studio-code)
+![Shadcn/UI](https://img.shields.io/badge/Shadcn/UI-Latest-000000?style=flat-square)
+
+### Backend & Database
+![Firebase](https://img.shields.io/badge/Firebase-11.2.0-ffca28?style=flat-square&logo=firebase)
+![Firestore](https://img.shields.io/badge/Firestore-NoSQL-ffca28?style=flat-square&logo=firebase)
+![Realtime DB](https://img.shields.io/badge/Realtime%20Database-Live%20Sync-ffca28?style=flat-square&logo=firebase)
+
+### AI & Services
+![Google Gemini](https://img.shields.io/badge/Google%20Gemini-Pro-4285f4?style=flat-square&logo=google)
+![Firebase Auth](https://img.shields.io/badge/Firebase%20Auth-OAuth-ffca28?style=flat-square&logo=firebase)
+![Nodemailer](https://img.shields.io/badge/Nodemailer-Email-339933?style=flat-square&logo=node.js)
 
 </div>
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start Guide
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Firebase account
-- Google Gemini API key
 
-### Installation
+Before you begin, ensure you have the following installed:
+- **Node.js** (v18.0.0 or higher)
+- **npm** (v9.0.0 or higher) or **yarn** (v1.22.0 or higher)
+- A **Firebase** account ([Create one here](https://firebase.google.com))
+- A **Google Gemini API** key ([Get it here](https://makersuite.google.com/app/apikey))
 
-1. **Clone the repository**
+### Installation Steps
+
+1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/haxplore.git
-   cd haxplore
+   git clone https://github.com/2405Gaurav/Collab-And-Code.git
+   cd Collab-And-Code
    ```
 
-2. **Install dependencies**
+2. **Install Dependencies**
    ```bash
    npm install
-   # or
+   # or if you prefer yarn
    yarn install
    ```
 
-3. **Set up environment variables**
+3. **Set Up Environment Variables**
+   
+   Create a `.env.local` file in the root directory:
    ```bash
-   cp .env.example .env.local
+   touch .env.local
    ```
    
-   Add your configuration:
+   Add the following configuration:
    ```env
+   # Firebase Configuration
    NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-   NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+
+   # Google Gemini AI
    NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+
+   # Email Configuration (for OTP)
+   EMAIL_USER=your_email@gmail.com
+   EMAIL_PASS=your_app_specific_password
    ```
 
-4. **Run the development server**
+4. **Configure Firebase**
+   
+   - Go to [Firebase Console](https://console.firebase.google.com)
+   - Create a new project or select existing one
+   - Enable **Authentication** (Email/Password & Google)
+   - Create **Firestore Database** (Start in test mode)
+   - Enable **Realtime Database**
+   - Copy your configuration to `.env.local`
+
+5. **Run the Development Server**
    ```bash
    npm run dev
    # or
    yarn dev
    ```
 
-5. **Open your browser**
+6. **Open Your Browser**
+   
    Navigate to [http://localhost:3000](http://localhost:3000)
+   
+   🎉 **You're all set!** Start coding collaboratively.
 
 ---
 
-## 🎯 Key Features in Action
+## 📸 Screenshots
+
+<div align="center">
+
+### Dashboard
+![Dashboard](https://via.placeholder.com/800x400/6366f1/ffffff?text=Workspace+Dashboard)
+*Manage your workspaces and team members*
+
+### Live Collaboration
+![Collaboration](https://via.placeholder.com/800x400/8b5cf6/ffffff?text=Real-Time+Code+Editing)
+*See live cursors and changes from your team*
+
+### AI Assistant
+![AI Chat](https://via.placeholder.com/800x400/0ea5e9/ffffff?text=AI+Powered+Chat)
+*Get intelligent coding help instantly*
+
+</div>
+
+---
+
+## 💡 Usage Examples
+
+### Creating a Workspace
+```javascript
+// Navigate to Dashboard → Click "Create Workspace"
+// Choose workspace type: Public or Private
+// Invite team members via email
+// Start collaborating instantly!
+```
 
 ### Real-Time Collaboration
 ```javascript
-// Multiple developers can edit simultaneously
-// Changes sync instantly across all users
-// No more merge conflicts!
+// Open any file in the workspace
+// Type code - your team sees changes live
+// See colored cursors showing where teammates are editing
+// Chat with team using the built-in messaging
 ```
 
-### AI-Powered Code Assistance
+### AI Code Assistance
 ```javascript
-// AI suggests improvements in real-time
-// Automatic documentation generation
-// Smart error detection and fixes
+// Select code → Right-click → "Generate Documentation"
+// Or use the AI chat: "Explain this function"
+// Get auto-completion suggestions as you type
+// Receive real-time error detection and fixes
 ```
 
-### Secure Workspace Management
-```javascript
-// Invite team members securely
-// Role-based access control
-// Real-time chat and collaboration
+---
+
+## 🗂️ Project Structure
+
+```
+Collab-And-Code/
+├── src/
+│   ├── app/                    # Next.js app router pages
+│   │   ├── api/               # API routes for AI services
+│   │   ├── dashboard/         # Workspace management
+│   │   ├── login/             # Authentication pages
+│   │   ├── profile/           # User profile
+│   │   ├── register/          # Sign up flow
+│   │   └── workspace/         # Collaborative editor
+│   ├── components/            # React components
+│   │   ├── ui/               # Shadcn UI components
+│   │   ├── Chat.jsx          # Real-time chat
+│   │   ├── Editor.jsx        # Monaco code editor
+│   │   ├── LiveCursor.jsx    # Cursor tracking
+│   │   └── Members.jsx       # Team member list
+│   ├── config/               # Firebase configuration
+│   ├── helpers/              # Utility functions
+│   └── styles/               # Global styles
+├── public/                    # Static assets
+├── .env.local                # Environment variables
+├── next.config.mjs           # Next.js configuration
+├── tailwind.config.js        # Tailwind CSS config
+└── package.json              # Dependencies
 ```
 
 ---
 
 ## 🤝 Contributing
 
-We love your input! We want to make contributing to Haxplore as easy and transparent as possible.
+We welcome contributions from the community! Here's how you can help:
 
-1. **Fork the repository**
-2. **Create your feature branch** (`git checkout -b feature/AmazingFeature`)
-3. **Commit your changes** (`git commit -m 'Add some AmazingFeature'`)
-4. **Push to the branch** (`git push origin feature/AmazingFeature`)
-5. **Open a Pull Request**
+### How to Contribute
+
+1. **Fork the Repository**
+   ```bash
+   # Click the 'Fork' button on GitHub
+   ```
+
+2. **Create a Feature Branch**
+   ```bash
+   git checkout -b feature/AmazingFeature
+   ```
+
+3. **Make Your Changes**
+   - Write clean, well-documented code
+   - Follow the existing code style
+   - Add tests if applicable
+
+4. **Commit Your Changes**
+   ```bash
+   git commit -m 'feat: add some AmazingFeature'
+   ```
+   
+   Use conventional commits:
+   - `feat:` for new features
+   - `fix:` for bug fixes
+   - `docs:` for documentation
+   - `style:` for formatting
+   - `refactor:` for code restructuring
+   - `test:` for adding tests
+   - `chore:` for maintenance
+
+5. **Push to Your Fork**
+   ```bash
+   git push origin feature/AmazingFeature
+   ```
+
+6. **Open a Pull Request**
+   - Provide a clear description of changes
+   - Reference any related issues
+   - Wait for code review
 
 ### Development Guidelines
-- Follow the existing code style
-- Add tests for new features
-- Update documentation as needed
-- Ensure all tests pass
+
+- 📝 Write meaningful commit messages
+- 🧪 Test your changes thoroughly
+- 📚 Update documentation for new features
+- 🎨 Follow the project's code style
+- ✅ Ensure all tests pass before submitting
+
+---
+
+## 🐛 Known Issues & Roadmap
+
+### Current Known Issues
+- [ ] Occasional cursor sync delay with >10 users
+- [ ] File tree refresh needed after bulk operations
+
+### Upcoming Features
+- [ ] **Video/Audio Chat** - Integrated voice/video calls
+- [ ] **Code Review Tools** - Built-in PR review system
+- [ ] **Terminal Integration** - Run code directly in browser
+- [ ] **Git Integration** - Version control within editor
+- [ ] **Plugin System** - Extend functionality with plugins
+- [ ] **Mobile App** - iOS and Android applications
+- [ ] **Offline Mode** - Work without internet, sync later
+- [ ] **Code Templates** - Quick-start project templates
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for complete details.
+
+```
+MIT License
+
+Copyright (c) 2025 Gaurav
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files...
+```
 
 ---
 
-## �� Acknowledgments
+## 🙏 Acknowledgments
 
-- **Monaco Editor** - For the powerful code editing experience
-- **Firebase** - For real-time database and authentication
-- **Google Gemini** - For AI-powered code assistance
-- **Next.js Team** - For the amazing React framework
-- **Shadcn UI** - For beautiful, accessible components
+Special thanks to these amazing technologies and communities:
+
+- **[Monaco Editor](https://microsoft.github.io/monaco-editor/)** - Powering our code editing experience
+- **[Firebase](https://firebase.google.com)** - Real-time database and authentication backbone
+- **[Google Gemini](https://ai.google.dev/)** - AI-powered code intelligence
+- **[Next.js](https://nextjs.org)** - The React framework for production
+- **[Shadcn/UI](https://ui.shadcn.com/)** - Beautiful, accessible component library
+- **[Tailwind CSS](https://tailwindcss.com)** - Utility-first CSS framework
+- **[Vercel](https://vercel.com)** - Deployment and hosting platform
 
 ---
+
+## 📞 Contact & Support
 
 <div align="center">
 
-**Made with ❤️ by Yash Dhiman**
+**Created and maintained by Gaurav**
 
-[![GitHub stars](https://img.shields.io/github/stars/yourusername/haxplore?style=social)](https://github.com/yourusername/haxplore/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/yourusername/haxplore?style=social)](https://github.com/yourusername/haxplore/network)
-[![GitHub issues](https://img.shields.io/github/issues/yourusername/haxplore)](https://github.com/yourusername/haxplore/issues)
-[![GitHub license](https://img.shields.io/github/license/yourusername/haxplore)](https://github.com/yourusername/haxplore/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-2405Gaurav-181717?style=for-the-badge&logo=github)](https://github.com/2405Gaurav)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/yourusername)
+[![Email](https://img.shields.io/badge/Email-Contact-EA4335?style=for-the-badge&logo=gmail)](mailto:your.email@gmail.com)
+
+### ⭐ Show Your Support
+
+If you find Collab and Code helpful, please consider giving it a star on GitHub!
+
+[![GitHub stars](https://img.shields.io/github/stars/2405Gaurav/Collab-And-Code?style=social)](https://github.com/2405Gaurav/Collab-And-Code/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/2405Gaurav/Collab-And-Code?style=social)](https://github.com/2405Gaurav/Collab-And-Code/network)
+[![GitHub issues](https://img.shields.io/github/issues/2405Gaurav/Collab-And-Code)](https://github.com/2405Gaurav/Collab-And-Code/issues)
+[![GitHub license](https://img.shields.io/github/license/2405Gaurav/Collab-And-Code)](https://github.com/2405Gaurav/Collab-And-Code/blob/main/LICENSE)
+
+---
+
+**Made with ❤️ and ☕ by Gaurav**
+
+*Empowering developers to collaborate better, code smarter, and build faster.*
 
 </div>
