@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { collection, doc, onSnapshot, deleteDoc } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
-import { X, LogOut } from "lucide-react"; // Close & Exit Icons
+import { X, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function ShowMembers({ workspaceId }) {
@@ -31,7 +31,7 @@ export default function ShowMembers({ workspaceId }) {
 
         const membersData = snapshot.docs.map((docSnap) => {
           const { userId, role, displayName, photoURL } = docSnap.data();
-          if (userId === user.uid) setUserRole(role); // Set the current user's role
+          if (userId === user.uid) setUserRole(role);
           return {
             id: userId,
             displayName: displayName || "Unknown User",
@@ -49,6 +49,7 @@ export default function ShowMembers({ workspaceId }) {
     return () => unsubscribe && unsubscribe();
   }, [workspaceId, user]);
 
+  // ✅ FIXED: Properly handle click outside with ref wrapping entire component
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (membersRef.current && !membersRef.current.contains(event.target)) {
@@ -71,10 +72,11 @@ export default function ShowMembers({ workspaceId }) {
   };
 
   return (
-    <div className="relative">
+    // ✅ FIXED: Wrap entire component with ref
+    <div ref={membersRef} className="relative">
       {/* Stacked Member Avatars */}
       <div className="flex gap-2 text-sm items-center">
-       👥 People: {members.length}
+        👥 People: {members.length}
         <div className="flex -space-x-4 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
           {members.slice(0, 4).map((member, index) => (
             <img
@@ -95,10 +97,7 @@ export default function ShowMembers({ workspaceId }) {
 
       {/* Members Dropdown */}
       {isOpen && (
-        <div
-          ref={membersRef}
-          className="absolute top-12 right-full bg-gray-900 p-4 rounded-lg shadow-lg w-80 z-50"
-        >
+        <div className="absolute top-12 right-full bg-gray-900 p-4 rounded-lg shadow-lg w-80 z-50">
           <div className="flex justify-between items-center border-b border-gray-600 pb-2">
             <h3 className="text-white text-sm font-semibold">Workspace Members</h3>
             <button className="text-gray-400 hover:text-white" onClick={() => setIsOpen(false)}>

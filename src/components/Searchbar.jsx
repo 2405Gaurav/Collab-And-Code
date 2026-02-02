@@ -11,10 +11,13 @@ export default function SearchBar({ workspaceId }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [workspaceMembers, setWorkspaceMembers] = useState(new Set()); // Store members as a Set
+  const [workspaceMembers, setWorkspaceMembers] = useState(new Set());
   const auth = getAuth();
   const currentUserEmail = auth.currentUser?.email;
-  const searchRef = useRef(null);
+  
+  // ✅ FIXED: Separate refs for button and dropdown
+  const buttonRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     if (workspaceId) {
@@ -30,9 +33,15 @@ export default function SearchBar({ workspaceId }) {
     }
   }, [searchTerm]);
 
+  // ✅ FIXED: Properly handle click outside with separate refs
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -48,7 +57,7 @@ export default function SearchBar({ workspaceId }) {
     try {
       const membersQuery = collection(db, `workspaces/${workspaceId}/members`);
       const membersSnapshot = await getDocs(membersQuery);
-      const membersSet = new Set(membersSnapshot.docs.map(doc => doc.id)); // Store member userIds
+      const membersSet = new Set(membersSnapshot.docs.map(doc => doc.id));
       setWorkspaceMembers(membersSet);
     } catch (error) {
       console.error("Error fetching workspace members:", error);
@@ -99,12 +108,20 @@ export default function SearchBar({ workspaceId }) {
 
   return (
     <div className="relative flex items-center">
-      <button ref={searchRef} className="rounded-full transition flex items-start gap-2" onClick={() => setIsOpen(!isOpen)}>
+      {/* ✅ FIXED: Use buttonRef */}
+      <button 
+        ref={buttonRef} 
+        className="rounded-full transition flex items-start gap-2" 
+        onClick={() => setIsOpen(!isOpen)}
+      >
         <UserPlus className="w-5 h-5 text-white" />Invite
       </button>
 
       {isOpen && (
-        <div ref={searchRef} className="absolute top-10 right-0 bg-slate-800 p-4 rounded-lg shadow-lg w-96 z-50">
+        <div 
+          ref={dropdownRef} 
+          className="absolute top-10 right-0 bg-slate-800 p-4 rounded-lg shadow-lg w-96 z-50"
+        >
           <div className="flex items-center border-b border-gray-600 pb-2">
             <input
               type="text"
@@ -113,7 +130,10 @@ export default function SearchBar({ workspaceId }) {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-transparent text-white p-2 text-sm outline-none"
             />
-            <button className="ml-2 text-gray-400 hover:text-white" onClick={() => setIsOpen(false)}>
+            <button 
+              className="ml-2 text-gray-400 hover:text-white" 
+              onClick={() => setIsOpen(false)}
+            >
               <X className="w-5 h-5" />
             </button>
           </div>

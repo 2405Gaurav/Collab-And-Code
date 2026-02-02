@@ -6,20 +6,19 @@ import { db } from "@/config/firebase";
 import Chat from "@/components/Chat";
 import Editor from "@/components/Editor";
 import SearchBar from "@/components/Searchbar";
-import { MessageCircle, Menu, PanelLeftOpen } from "lucide-react"; // Chat & Menu icons
+import { MessageCircle, Menu, PanelLeftOpen } from "lucide-react";
 import Header from "@/components/Header";
 import ShowMembers from "@/components/Members";
 import LiveCursor from "@/components/LiveCursor";
 import NavPanel from "@/components/Navpanel";
 
 const Workspace = () => {
-  const { workspaceId } = useParams(); // Get workspaceId from URL
+  const { workspaceId } = useParams();
   const [selectedFile, setSelectedFile] = useState(null);
   const [workspaceName, setWorkspaceName] = useState("");
   const [membersCount, setMembersCount] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(true);
-
 
   useEffect(() => {
     const fetchWorkspace = async () => {
@@ -43,9 +42,8 @@ const Workspace = () => {
     fetchWorkspace();
   }, [workspaceId]);
 
-  useEffect(() => {
-    console.log("🔄 Parent re-rendered!");
-  });
+  // ✅ FIXED: Removed pointless useEffect with no dependencies
+  // This was logging on every render and serving no purpose
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white min-w-[1024px] relative">

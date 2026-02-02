@@ -1,39 +1,66 @@
-"use client"; // Mark this file as a client component
+"use client";
 
 import React, { useState, useEffect } from "react";
-import { auth, db } from "@/config/firebase"; // Firebase config
+import { auth, db } from "@/config/firebase";
 import { useRouter } from "next/navigation";
-import { collection, doc, getDoc, setDoc, updateDoc, arrayRemove, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, arrayRemove } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogTrigger, 
+  DialogContent, 
+  DialogTitle, 
+  DialogDescription,
+  DialogHeader,
+  DialogFooter 
+} from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { toast, ToastContainer } from "react-toastify"; // Import Toast
-import "react-toastify/dist/ReactToastify.css"; // Import Toast styles
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import logout from "@/helpers/logoutHelp";
-import { FaArrowLeft } from "react-icons/fa"; // Importing the icon for the back button
+import { 
+  ArrowLeft, 
+  LogOut, 
+  KeyRound, 
+  Mail, 
+  Check, 
+  X, 
+  Loader2 
+} from "lucide-react";
+
+const toastOptions = {
+  position: "top-right",
+  autoClose: 3000,
+  hideProgressBar: false,
+  closeOnClick: true,
+  pauseOnHover: true,
+  draggable: true,
+  theme: "dark",
+};
 
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [email, setEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [invites, setInvites] = useState([]); // Store invitations
+  const [invites, setInvites] = useState([]);
   const router = useRouter();
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      setUser(currentUser);
-      setEmail(currentUser.email);
-      fetchInvites(currentUser.uid);
-    } else {
-      router.push("/login"); // Redirect to login if not authenticated
-    }
-  }, []);
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setEmail(currentUser.email);
+        fetchInvites(currentUser.uid);
+      } else {
+        router.push("/login");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const fetchInvites = async (userId) => {
     try {
@@ -50,17 +77,13 @@ const Profile = () => {
   const handlePasswordReset = async () => {
     if (!email) return;
     setIsLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       await sendPasswordResetEmail(auth, email);
-      setSuccessMessage("Password reset email sent successfully. Please check your inbox.");
-      toast.success("Password reset link sent to your email!"); // Show success toast
+      toast.success("Password reset link sent to your email!", toastOptions);
       setIsDialogOpen(false);
     } catch (error) {
-      setErrorMessage("Error sending password reset email: " + error.message);
-      toast.error("Error sending password reset email "); // Show error toast
+      toast.error("Error sending password reset email", toastOptions);
     } finally {
       setIsLoading(false);
     }
@@ -78,18 +101,16 @@ const Profile = () => {
         photoURL: user.photoURL || "/robotic.png",
       });
 
-      // Step 2: Remove the invite from the user's document
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         invites: arrayRemove(workspaceId),
       });
 
-      // Update UI
       setInvites(invites.filter((id) => id !== workspaceId));
-      toast.success("You have joined the workspace as a contributor!"); // Success toast
+      toast.success("Joined workspace successfully!", toastOptions);
     } catch (error) {
       console.error("Error accepting invite:", error);
-      toast.error("Error accepting invite!"); // Error toast
+      toast.error("Error joining workspace", toastOptions);
     }
   };
 
@@ -102,122 +123,159 @@ const Profile = () => {
         invites: arrayRemove(workspaceId),
       });
 
-      // Update UI
       setInvites(invites.filter((id) => id !== workspaceId));
-      toast.success("Invite deleted successfully."); // Success toast
+      toast.info("Invite declined", toastOptions);
     } catch (error) {
       console.error("Error deleting invite:", error);
-      toast.error("Error deleting invite!"); // Error toast
+      toast.error("Error declining invite", toastOptions);
     }
   };
 
   const isGoogleUser = user && user.providerData.some((provider) => provider.providerId === "google.com");
 
-  const handleGoBack = () => {
-    router.push("/dashboard"); // Redirect to the dashboard
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-4">
-      <div className="w-full max-w-md bg-gray-800 rounded-lg shadow-lg p-6">
-        {/* Profile Header */}
-        <div className="flex flex-col items-center mb-6">
-          <Avatar className="w-16 h-16 mb-4 border-2 border-blue-500">
-            <AvatarImage src={auth.currentUser?.photoURL || "/robotic.png"} alt="Profile" />
-            <AvatarFallback>U</AvatarFallback>
-          </Avatar>
-          <h1 className="text-xl font-semibold text-blue-400">{user?.displayName || "User"}</h1>
-          <p className="text-sm text-gray-400">{user?.email}</p>
+    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans selection:bg-violet-500/30 selection:text-violet-200 flex items-center justify-center p-6 relative overflow-hidden">
+      <ToastContainer theme="dark" />
+
+      {/* Background Ambience */}
+      <div className="absolute inset-0 z-0 h-full w-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      <div className="absolute top-0 left-0 right-0 h-96 bg-violet-950/20 blur-[120px] rounded-full pointer-events-none" />
+
+      <div className="w-full max-w-md bg-[#111]/80 border border-white/10 backdrop-blur-xl shadow-2xl shadow-violet-900/10 z-10 rounded-xl overflow-hidden">
+        
+        {/* Header / Avatar */}
+        <div className="relative pt-12 pb-8 px-6 flex flex-col items-center bg-gradient-to-b from-white/5 to-transparent">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 left-4 text-zinc-400 hover:text-white hover:bg-white/5"
+              onClick={() => router.push("/dashboard")}
+            >
+              <ArrowLeft size={20} />
+            </Button>
+            
+            <div className="p-1 rounded-full ring-2 ring-violet-500/30 bg-[#111] mb-4">
+              <Avatar className="w-24 h-24">
+                <AvatarImage src={user?.photoURL || "/robotic.png"} alt="Profile" />
+                <AvatarFallback className="bg-zinc-800 text-zinc-400 text-2xl">
+                  {user?.displayName ? user.displayName.charAt(0).toUpperCase() : "U"}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            
+            <h1 className="text-xl font-bold tracking-tight text-white">{user?.displayName || "Anonymous User"}</h1>
+            <p className="text-sm text-zinc-500 font-medium">{user?.email}</p>
         </div>
 
-        {/* Logout Button */}
-        <Button
-          onClick={logout}
-          className="w-full bg-red-600 hover:bg-red-700 text-sm font-medium py-2 rounded-md mb-6 text-class"
-        >
-          Logout
-        </Button>
-
-        {/* Go Back to Dashboard Button */}
-        <button
-          onClick={handleGoBack}
-          className="w-full text-white bg-opacity-20 ring-1 ring-blue-400  bg-blue-600 hover:bg-blue-700 text-sm font-medium py-2 rounded-md mb-6 flex items-center justify-center"
-        >
-          <FaArrowLeft className="mr-2" />
-           Dashboard
-        </button>
-
-        {/* Change Password Section */}
-        {!isGoogleUser && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-sm font-medium py-2 rounded-md mb-6 text-white">
-                Change Password
-              </Button>
-            </DialogTrigger>
-         <DialogContent className="bg-gray-800 p-6 rounded-lg">
-  <DialogTitle className="text-lg font-semibold mb-4 text-white">Reset Password</DialogTitle>
-  <DialogDescription className="text-sm text-gray-400 mb-4">
-    Enter your email to receive a password reset link.
-  </DialogDescription>
-  <Input
-    type="email"
-    placeholder="Your Email"
-    value={email}
-    onChange={(e) => setEmail(e.target.value)}
-    className="mb-4 bg-gray-700 text-white border border-blue-500 rounded-md text-sm"
-  />
-  <div className="flex justify-end gap-2">
-    <Button
-      variant="secondary"
-      onClick={() => setIsDialogOpen(false)}
-      className="bg-gray-600 hover:bg-gray-700 text-sm font-medium py-2 px-4 rounded-md"
-    >
-      Cancel
-    </Button>
-    <Button
-      onClick={handlePasswordReset}
-      disabled={isLoading}
-      className={`${isLoading ? "bg-gray-500" : "bg-blue-600"} hover:bg-blue-700 text-sm font-medium py-2 px-4 rounded-md text-white`}
-    >
-      {isLoading ? "Sending..." : "Send Link"}
-    </Button>
-  </div>
-</DialogContent>
-          </Dialog>
-        )}
-
-        {/* Invitations Section */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold text-yellow-400 mb-4">Pending Invitations</h2>
-          {invites.length > 0 ? (
-            invites.map((workspaceId) => (
-              <div key={workspaceId} className="bg-gray-700 p-3 rounded-md flex justify-between items-center mb-3">
-                <span className="text-sm text-gray-200">Workspace ID: {workspaceId}</span>
-                <div className="flex gap-2">
-                  <Button
-                    className="bg-green-500 hover:bg-green-600 text-xs font-medium px-3 py-1 rounded-md"
-                    onClick={() => handleAcceptInvite(workspaceId)}
-                  >
-                    Accept
+        <div className="p-6 space-y-6">
+          
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            {!isGoogleUser && (
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start border-white/10 hover:bg-white/5 text-zinc-300 hover:text-white h-11">
+                    <KeyRound size={16} className="mr-3 text-zinc-500" />
+                    Reset Password
                   </Button>
-                  <Button
-                    className="bg-red-500 hover:bg-red-600 text-xs font-medium px-3 py-1 rounded-md"
-                    onClick={() => handleDeleteInvite(workspaceId)}
-                  >
-                    Delete
-                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-[#111] border border-white/10 text-white sm:max-w-md shadow-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">Reset Password</DialogTitle>
+                    <DialogDescription className="text-zinc-400">
+                      Enter your email to receive a password reset link.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Input
+                      type="email"
+                      placeholder="john@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-zinc-900/50 border-white/10 text-white focus:border-violet-500/50 focus:ring-violet-500/20"
+                    />
+                  </div>
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setIsDialogOpen(false)}
+                      className="text-zinc-400 hover:text-white"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handlePasswordReset}
+                      disabled={isLoading}
+                      className="bg-violet-600 hover:bg-violet-700 text-white"
+                    >
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Link"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="w-full justify-start border-red-900/30 text-red-400 hover:text-red-300 hover:bg-red-950/30 hover:border-red-900/50 h-11"
+            >
+              <LogOut size={16} className="mr-3" />
+              Sign Out
+            </Button>
+          </div>
+
+          <div className="border-t border-white/10 my-4"></div>
+
+          {/* Invitations Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+                <Mail size={16} className="text-violet-400" />
+                <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Invitations</h2>
+                {invites.length > 0 && (
+                    <span className="bg-violet-500/20 text-violet-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {invites.length}
+                    </span>
+                )}
+            </div>
+            
+            <div className="space-y-3 max-h-48 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+              {invites.length > 0 ? (
+                invites.map((workspaceId) => (
+                  <div key={workspaceId} className="bg-zinc-900/50 border border-white/5 p-3 rounded-lg flex justify-between items-center group hover:border-violet-500/30 transition-colors">
+                    <div className="flex flex-col">
+                        <span className="text-xs text-zinc-500 uppercase">Workspace ID</span>
+                        <span className="text-sm text-zinc-300 font-mono truncate max-w-[120px]">{workspaceId.slice(0, 8)}...</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="icon"
+                        className="h-8 w-8 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 border border-emerald-500/20"
+                        onClick={() => handleAcceptInvite(workspaceId)}
+                        title="Accept"
+                      >
+                        <Check size={14} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        className="h-8 w-8 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 border border-red-500/20"
+                        onClick={() => handleDeleteInvite(workspaceId)}
+                        title="Decline"
+                      >
+                        <X size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 border border-dashed border-white/5 rounded-lg bg-white/[0.02]">
+                    <p className="text-sm text-zinc-500">No pending invitations</p>
                 </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-400">No pending invitations.</p>
-          )}
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Toast Container for notifications */}
-      <ToastContainer position="top-right" theme="dark" />
     </div>
   );
 };

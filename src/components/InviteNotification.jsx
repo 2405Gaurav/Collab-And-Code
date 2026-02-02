@@ -10,7 +10,6 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { set } from "firebase/database";
 
 const InviteNotification = () => {
   const { user } = useAuth();
@@ -89,14 +88,18 @@ const InviteNotification = () => {
                   <CardTitle className="text-lg font-semibold text-black">
                     Workspace Invite
                   </CardTitle>
-                  <motion.button
+                  {/* ✅ FIXED: Use motion.div wrapper instead of motion.button */}
+                  <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => setInvites((prev) => prev.filter((id) => id !== workspaceId))}
-                    className="text-gray-700 hover:text-white transition-colors"
                   >
-                    <X size={20} strokeWidth={2} />
-                  </motion.button>
+                    <button
+                      onClick={() => setInvites((prev) => prev.filter((id) => id !== workspaceId))}
+                      className="text-gray-700 hover:text-white transition-colors"
+                    >
+                      <X size={20} strokeWidth={2} />
+                    </button>
+                  </motion.div>
                 </div>
               </CardHeader>
               <CardContent className="p-4 pt-0">
