@@ -10,7 +10,7 @@
 
 **Transform your coding workflow with real-time collaboration, AI-powered assistance, and seamless team synchronization**
 
-[🌐 Live Demo](https://collabandcode.vercel.app) • [📖 Documentation](#-quick-start-guide) • [🐛 Report Bug](https://github.com/2405Gaurav/Collab-And-Code/issues) • [✨ Request Feature](https://github.com/2405Gaurav/Collab-And-Code/issues)
+[🌐 Live Demo](https://code-collab.thegauravthakur.in/) • [📖 Documentation](#-quick-start-guide) • [🐛 Report Bug](https://github.com/2405Gaurav/Collab-And-Code/issues) • [✨ Request Feature](https://github.com/2405Gaurav/Collab-And-Code/issues)
 
 </div>
 
